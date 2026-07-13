@@ -25,7 +25,7 @@ public class JwtService {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        long expirationTimeInMs = 1000 * 60 * 15; //15 minutos de duracion
+        long expirationTimeInMs = 1000 * 60 * 3; //3 minutos de duracion
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
