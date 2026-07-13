@@ -1,5 +1,7 @@
 package com.example.hotelAPI.service;
 
+import com.example.hotelAPI.dto.request.ChangePasswordDtoRequest;
+import com.example.hotelAPI.dto.request.ResetPasswordDtoRequest;
 import com.example.hotelAPI.dto.request.UserDtoRequest;
 import com.example.hotelAPI.dto.request.UserLoginDtoRequest;
 import com.example.hotelAPI.dto.response.AuthSuccessDtoResponse;
@@ -8,14 +10,17 @@ import com.example.hotelAPI.dto.response.RefreshTokenDtoResponse;
 import com.example.hotelAPI.enums.Role;
 import com.example.hotelAPI.jwt.JwtService;
 import com.example.hotelAPI.mappers.UserMapper;
+import com.example.hotelAPI.model.PasswordResetTokenEntity;
 import com.example.hotelAPI.model.RefreshTokenEntity;
 import com.example.hotelAPI.model.RoleEntity;
 import com.example.hotelAPI.model.UserEntity;
+import com.example.hotelAPI.repository.PasswordResetTokenRepository;
 import com.example.hotelAPI.repository.RefreshTokenRepository;
 import com.example.hotelAPI.repository.RoleRepository;
 import com.example.hotelAPI.repository.UserRepository;
 import com.example.hotelAPI.security.CustomUserDetails;
 import com.example.hotelAPI.security.UserDetailsService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,6 +50,8 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final CookieService cookieService;
     private final RefreshTokenRepository refreshTokenRepository;
+
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     public AuthSuccessDtoResponse register(UserDtoRequest request){
 
@@ -121,6 +128,71 @@ public class AuthService {
             refreshTokenRepository.deleteByUserEntity(userEntity);
         }
         return cookieService.cleanRefreshTokenCookie();
+    }
+
+    public void forgotPassword(String email) {
+        Optional<UserEntity> userOptional = userRepository.findByEmail(email);
+
+        // Salida silenciosa por seguridad si no existe el usuario
+        if (userOptional.isEmpty()) {
+            return;
+        }
+
+        UserEntity user = userOptional.get();
+
+        passwordResetTokenRepository.deleteByUserEntity(user);
+
+        String token = java.util.UUID.randomUUID().toString();
+
+        PasswordResetTokenEntity resetTokenEntity = PasswordResetTokenEntity.builder()
+                .token(token)
+                .userEntity(user)
+                .expiryDate(java.time.LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        passwordResetTokenRepository.save(resetTokenEntity);
+
+        //enviar email
+        System.out.println("Enlace enviado a " + email + ": https://tuapp.com/reset-password?token=" + token);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordDtoRequest request) {
+
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new RuntimeException("invalid or inexistent recuperation token"));
+
+        if (resetToken.isExpired()) {
+            passwordResetTokenRepository.delete(resetToken); // Limpieza opcional
+            throw new RuntimeException("recuperation token is expired");
+        }
+
+        UserEntity user = resetToken.getUserEntity();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        passwordResetTokenRepository.delete(resetToken);
+    }
+
+    public void changePassword(ChangePasswordDtoRequest request) {
+
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        if (username == null || username.equals("anonymousUser")) {
+            throw new RuntimeException("no authenticated user");
+        }
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("user not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("password does not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
 }
