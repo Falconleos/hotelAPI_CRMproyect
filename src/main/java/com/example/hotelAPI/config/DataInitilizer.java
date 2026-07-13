@@ -19,7 +19,10 @@ public class DataInitilizer implements CommandLineRunner {
         for (Role role : Role.values()) {
             // Si no existe, lo creamos
             if (roleRepository.findByName(role).isEmpty()) {
-                roleRepository.save(RoleEntity.builder().name(role).build());
+                roleRepository.save(
+                        RoleEntity.builder()
+                        .name(role)
+                        .build());
             }
         }
     }
