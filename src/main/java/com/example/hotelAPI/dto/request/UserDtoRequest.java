@@ -2,6 +2,7 @@ package com.example.hotelAPI.dto.request;
 
 import com.example.hotelAPI.model.RoleEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -15,21 +16,53 @@ import java.util.Set;
 @Getter
 @Setter
 @Builder
+@Schema(description = "Datos detallados requeridos para registrar un nuevo usuario en el sistema")
 public class UserDtoRequest {
 
+    @Schema(
+            description = "Nombre de usuario único para iniciar sesión",
+            example = "johndoe99",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "username is necessary")
     private String username;
+
+    @Schema(
+            description = "Contraseña de acceso a la cuenta",
+            example = "SecretPassword123!",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "password is necessary")
     private String password;
 
+    @Schema(
+            description = "Primer y segundo nombre del usuario",
+            example = "John",
+            minLength = 3,
+            maxLength = 50,
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "Name is necessary")
     @Size(min = 3, max = 50, message = "Name must contains between 3 and 50 characters")
     private String name;
 
+    @Schema(
+            description = "Apellidos del usuario",
+            example = "Doe",
+            minLength = 3,
+            maxLength = 50,
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "Surname is necessary")
     @Size(min = 3, max = 50, message = "Surname must contains between 3 and 50 characters")
     private String surname;
 
+    @Schema(
+            description = "Documento Nacional de Identidad (DNI), solo números (7 a 10 dígitos)",
+            example = "45678912",
+            pattern = "\\d{7,10}",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "Dni is necessary")
     @Pattern(
             regexp = "\\d{7,10}",
@@ -37,10 +70,21 @@ public class UserDtoRequest {
     )
     private String dni;
 
+    @Schema(
+            description = "Dirección de correo electrónico válida y única",
+            example = "john.doe@example.com",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "Email is necessary")
     @Email(message = "the email must be valid")
     private String email;
 
+    @Schema(
+            description = "Número de teléfono celular (exactamente 10 dígitos numéricos)",
+            example = "1122334455",
+            pattern = "^[0-9]{10}$",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "the phone number is necessary")
     @Pattern(
             regexp = "^[0-9]{10}$",
@@ -48,6 +92,12 @@ public class UserDtoRequest {
     )
     private String phoneNumber;
 
+    @Schema(
+            description = "Fecha de nacimiento (debe ser una fecha pasada)",
+            example = "1995-05-15",
+            type = "string",
+            format = "date"
+    )
     @Past(message = "birthDay must be past")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDay;

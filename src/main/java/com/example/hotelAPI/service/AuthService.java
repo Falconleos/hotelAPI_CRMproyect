@@ -133,7 +133,6 @@ public class AuthService {
     public void forgotPassword(String email) {
         Optional<UserEntity> userOptional = userRepository.findByEmail(email);
 
-        // Salida silenciosa por seguridad si no existe el usuario
         if (userOptional.isEmpty()) {
             return;
         }
@@ -152,7 +151,7 @@ public class AuthService {
 
         passwordResetTokenRepository.save(resetTokenEntity);
 
-        //enviar email
+        //enviar email // a completar mediante consumo de API externa
         System.out.println("Enlace enviado a " + email + ": https://tuapp.com/reset-password?token=" + token);
     }
 
