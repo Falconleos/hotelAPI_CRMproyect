@@ -8,10 +8,13 @@ import lombok.*;
 @AllArgsConstructor
 @Getter
 @Setter
+@Builder
 @Entity
 @Table(name = "employees")
-@PrimaryKeyJoinColumn(name = "user_id") // Une la clave primaria de empleados con la de usuarios
 public class EmployeeEntity extends UserEntity {
+
+    @Id
+    private Long id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -19,4 +22,9 @@ public class EmployeeEntity extends UserEntity {
 
     @Column(nullable = false)
     private Double salary;
+
+    @OneToOne(fetch = FetchType.LAZY) // Relación 1 a 1 con carga perezosa
+    @MapsId // Comparte la clave primaria con UserEntity (mantiene la eficiencia)
+    @JoinColumn(name = "user_id") // Nombre de la columna FK/PK en la tabla employees
+    private UserEntity user;
 }

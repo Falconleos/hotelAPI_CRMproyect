@@ -1,6 +1,9 @@
 package com.example.hotelAPI.controller;
 
 import com.example.hotelAPI.dto.request.ChangePasswordDtoRequest;
+import com.example.hotelAPI.dto.request.UserDtoRequest;
+import com.example.hotelAPI.dto.response.UserDtoResponse;
+import com.example.hotelAPI.service.UserService;
 import com.example.hotelAPI.service.serviceImpl.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -8,11 +11,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/private/user")
@@ -22,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     @PostMapping("/change-password")
     @Operation(
@@ -36,6 +41,80 @@ public class UserController {
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordDtoRequest request) {
         authService.changePassword(request);
         return ResponseEntity.ok().build();
+    }
+
+    //-----------------------------recepcionista o administrador crean usuario---------------------------//
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
+    @Operation(
+            summary = "Crear nuevo usuario (Personal)",
+            description = "Permite a un administrador o recepcionista registrar un nuevo usuario en el sistema con una contraseña temporal."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Usuario creado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "El email o DNI ya existen en el sistema"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado")
+    })
+    public ResponseEntity<UserDtoResponse> createUser(@Valid @RequestBody UserDtoRequest userDtoRequest) {
+        return new ResponseEntity<>(userService.createUser(userDtoRequest), HttpStatus.CREATED);
+    }
+
+    /*------recepcionista o administrador obtienen por id y usuario solo su id---------------------------*/
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST') or (hasRole('GUEST') and #id == principal.id)")
+    @Operation(
+            summary = "Obtener usuario por ID",
+            description = "Devuelve los detalles de un usuario. Los huéspedes solo pueden consultarse a sí mismos."
+    )
+    public ResponseEntity<UserDtoResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getById(id));
+    }
+
+    /*------recepcionista o administrador obtienen por dni---------------------------*/
+    @GetMapping("/dni/{dni}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
+    @Operation(
+            summary = "Buscar usuario por DNI",
+            description = "Permite buscar un usuario directamente usando su número de DNI."
+    )
+    public ResponseEntity<UserDtoResponse> getByDni(@PathVariable String dni) {
+        return ResponseEntity.ok(userService.userByDni(dni));
+    }
+
+    /*------recepcionista o administrador obtienen por dni---------------------------*/
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
+    @Operation(
+            summary = "Listar todos los usuarios",
+            description = "Devuelve una lista con todos los usuarios registrados en el hotel."
+    )
+    public ResponseEntity<List<UserDtoResponse>> getAll() {
+        return ResponseEntity.ok(userService.getAll());
+    }
+
+    /*------recepcionista o administrador actualizan por id y usuario solo su id---------------------------*/
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST') or (hasRole('GUEST') and #id == principal.id)")
+    @Operation(
+            summary = "Actualizar datos del usuario",
+            description = "Permite modificar la información personal. Los huéspedes solo pueden modificar su propio perfil."
+    )
+    public ResponseEntity<UserDtoResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserDtoRequest userDtoRequest) {
+        return ResponseEntity.ok(userService.updateUser(id, userDtoRequest));
+    }
+
+    /*------administrador elimina---------------------------*/
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Eliminar un usuario",
+            description = "Elimina físicamente a un usuario del sistema mediante su ID. Acción exclusiva del Administrador."
+    )
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

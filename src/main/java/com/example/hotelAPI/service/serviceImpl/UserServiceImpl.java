@@ -28,6 +28,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
+
     @Override
     public UserDtoResponse getById(Long id) {
         return userMapper.toDto(findEntityById(id));
@@ -46,6 +47,7 @@ public class UserServiceImpl implements UserService {
                 .toList();
     }
 
+    //preauthorize admin - recepcionist
     @Override // Metodo para recepcionista
     public UserDtoResponse createUser(UserDtoRequest userDtoRequest) {
 
@@ -82,12 +84,14 @@ public class UserServiceImpl implements UserService {
         return userMapper.toDto(savedUser);
     }
 
+    //preauthorize admin
     @Override
     public void deleteUser(Long id) {
         UserEntity userEntity = findEntityById(id);
         userRepository.delete(userEntity);
     }
 
+    //preauthorize admin-recepcionist-guest
     @Override
     @Transactional
     public UserDtoResponse updateUser(Long id, UserDtoRequest userDtoRequest) {
