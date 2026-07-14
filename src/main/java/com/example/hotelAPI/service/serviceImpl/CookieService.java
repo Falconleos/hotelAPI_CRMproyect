@@ -1,6 +1,5 @@
-package com.example.hotelAPI.service;
+package com.example.hotelAPI.service.serviceImpl;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package com.example.hotelAPI.service;
+package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.dto.request.ChangePasswordDtoRequest;
 import com.example.hotelAPI.dto.request.ResetPasswordDtoRequest;

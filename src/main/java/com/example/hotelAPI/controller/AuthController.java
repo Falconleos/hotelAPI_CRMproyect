@@ -1,13 +1,12 @@
 package com.example.hotelAPI.controller;
 
-import com.example.hotelAPI.dto.request.ChangePasswordDtoRequest;
 import com.example.hotelAPI.dto.request.ResetPasswordDtoRequest;
 import com.example.hotelAPI.dto.request.UserDtoRequest;
 import com.example.hotelAPI.dto.request.UserLoginDtoRequest;
 import com.example.hotelAPI.dto.response.AuthSuccessDtoResponse;
 import com.example.hotelAPI.dto.response.AuthTokenResponse;
 import com.example.hotelAPI.dto.response.RefreshTokenDtoResponse;
-import com.example.hotelAPI.service.AuthService;
+import com.example.hotelAPI.service.serviceImpl.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -127,18 +126,5 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/change-password")
-    @Operation(
-            summary = "Cambiar contraseña interna",
-            description = "Permite a un usuario autenticado modificar su contraseña actual validando primero su clave vigente."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Contraseña actualizada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "La contraseña actual provista es incorrecta"),
-            @ApiResponse(responseCode = "401", description = "No autorizado / No se encontró usuario en el contexto de seguridad")
-    })
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordDtoRequest request) {
-        authService.changePassword(request);
-        return ResponseEntity.ok().build();
-    }
+
 }
