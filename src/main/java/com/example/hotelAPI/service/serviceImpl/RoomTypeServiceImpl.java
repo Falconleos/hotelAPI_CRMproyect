@@ -60,20 +60,29 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public void deleteRoomType(Long id) {
-        // 1. Recuperamos el RoomType con sus habitaciones
-        RoomTypeEntity roomType = roomTypeRepository.findById(id)
+        // 1. Recuperamos el RoomType que se quiere eliminar
+        RoomTypeEntity roomTypeToDelete = roomTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Cannot delete. Room type not found with ID: " + id));
 
-        // 2. Desvinculamos las habitaciones rompiendo la relación (las pasamos a null)
-        if (roomType.getRooms() != null && !roomType.getRooms().isEmpty()) {
-            for (RoomEntity room : roomType.getRooms()) {
-                room.setType(null); // Seteamos el tipo a null en cada habitación
-            }
-            // Limpiamos la lista para desvincularlas del contexto de persistencia
-            roomType.getRooms().clear();
+        // 2. Seguridad: No permitir borrar el tipo comodín "Basic"
+        if ("Basic".equalsIgnoreCase(roomTypeToDelete.getName())) {
+            throw new IllegalArgumentException("The default 'Basic' room type cannot be deleted as it is used for fallback.");
         }
 
-        // 3. Ahora sí, eliminamos el tipo de habitación de forma segura
-        roomTypeRepository.delete(roomType);
+        // 3. Recuperamos el tipo "Basic" para reasignar las habitaciones huérfanas
+        RoomTypeEntity basicRoomType = roomTypeRepository.findByName("Basic")
+                .orElseThrow(() -> new EntityNotFoundException("Critical error: Default room type 'Basic' not found in database."));
+
+        // 4. Reasignamos las habitaciones asociadas al tipo "Basic"
+        if (roomTypeToDelete.getRooms() != null && !roomTypeToDelete.getRooms().isEmpty()) {
+            for (RoomEntity room : roomTypeToDelete.getRooms()) {
+                room.setType(basicRoomType); // En vez de null, le asignamos el tipo Basic
+            }
+            // Limpiamos la lista para desasociarlas de la entidad que se va a eliminar
+            roomTypeToDelete.getRooms().clear();
+        }
+
+        // 5. Procedemos a eliminar la categoría de forma segura
+        roomTypeRepository.delete(roomTypeToDelete);
     }
 }

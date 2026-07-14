@@ -2,8 +2,10 @@ package com.example.hotelAPI.config;
 
 import com.example.hotelAPI.enums.Role;
 import com.example.hotelAPI.model.RoleEntity;
+import com.example.hotelAPI.model.RoomTypeEntity;
 import com.example.hotelAPI.model.UserEntity;
 import com.example.hotelAPI.repository.RoleRepository;
+import com.example.hotelAPI.repository.RoomTypeRepository;
 import com.example.hotelAPI.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -19,6 +21,7 @@ public class DataInitilizer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final RoomTypeRepository roomTypeRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -61,6 +64,20 @@ public class DataInitilizer implements CommandLineRunner {
 
             userRepository.save(defaultAdmin);
             System.out.println(">> Default admin user successfully created (Username: admin / Password: admin123) <<");
+        }
+
+        // 3. Crear RoomType por defecto ("Basic") si no existe
+        String defaultRoomTypeName = "Basic";
+        if (!roomTypeRepository.existsByName(defaultRoomTypeName)) {
+            RoomTypeEntity defaultType = RoomTypeEntity.builder()
+                    .name(defaultRoomTypeName)
+                    .capacity(1) // Usamos 1 por la validación @Positive de tu modelo
+                    .description("Categoría temporal por defecto")
+                    .pricePerNight(0.0)
+                    .build();
+
+            roomTypeRepository.save(defaultType);
+            System.out.println(">> Default RoomType 'Basic' successfully created <<");
         }
 
     }
