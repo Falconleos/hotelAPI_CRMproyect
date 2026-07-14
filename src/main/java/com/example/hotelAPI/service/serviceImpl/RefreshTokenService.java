@@ -1,4 +1,4 @@
-package com.example.hotelAPI.service;
+package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.model.RefreshTokenEntity;
 import com.example.hotelAPI.model.UserEntity;
