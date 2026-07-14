@@ -1,6 +1,7 @@
 package com.example.hotelAPI.service;
 
 import com.example.hotelAPI.dto.request.UserDtoRequest;
+import com.example.hotelAPI.dto.request.UserDtoRequestCreation;
 import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.model.UserEntity;
 
@@ -10,7 +11,7 @@ public interface UserService {
     UserDtoResponse getById (Long id);
     UserEntity findEntityById(Long id);
     List<UserDtoResponse> getAll();
-    UserDtoResponse createUser(UserDtoRequest userDtoRequest);
+    UserDtoResponse createUserWithRole(UserDtoRequestCreation request);
     void deleteUser (Long id);
     UserDtoResponse updateUser(Long id, UserDtoRequest userDtoRequest);
     UserDtoResponse userByDni(String dni);

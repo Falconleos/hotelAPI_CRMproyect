@@ -1,6 +1,7 @@
 package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.dto.request.UserDtoRequest;
+import com.example.hotelAPI.dto.request.UserDtoRequestCreation;
 import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.enums.Role;
 import com.example.hotelAPI.mappers.UserMapper;
@@ -48,35 +49,34 @@ public class UserServiceImpl implements UserService {
     }
 
     //preauthorize admin - recepcionist
-    @Override // Metodo para recepcionista
-    public UserDtoResponse createUser(UserDtoRequest userDtoRequest) {
-
-        // 1. Validaciones de existencia (Muy importante)
-        if (userRepository.existsByEmail(userDtoRequest.getEmail())) {
+    // Implementación en UserServiceImpl.java
+    @Override
+    public UserDtoResponse createUserWithRole(UserDtoRequestCreation request) {
+        // 1. Validaciones de existencia
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("email already exists");
         }
-        if (userRepository.existsByDni(userDtoRequest.getDni())) {
+        if (userRepository.existsByDni(request.getDni())) {
             throw new RuntimeException("dni already exists");
         }
 
         // 2. Mapear DTO a Entidad
-        UserEntity userEntity = userMapper.toEntity(userDtoRequest);
+        UserEntity userEntity = userMapper.toEntity(request);
 
-        // 3. Asignar Rol por defecto (GUEST)
-        RoleEntity guestRole = roleRepository.findByName(Role.GUEST)
-                .orElseThrow(() -> new RuntimeException("No role named GUEST"));
-        userEntity.setRoles(Set.of(guestRole));
+        // 3. Obtener el rol dinámico enviado en el request
+        RoleEntity userRole = roleRepository.findByName(request.getRole())
+                .orElseThrow(() -> new RuntimeException("No role named: " + request.getRole()));
+        userEntity.setRoles(Set.of(userRole));
 
-        // 4. Generar contraseña temporal 1234 y encriptarla
-        String temporalPassword = "1234";
-        userEntity.setPassword(passwordEncoder.encode(temporalPassword));
+        // 4. Encriptar contraseña provista
+        userEntity.setPassword(passwordEncoder.encode(request.getPassword()));
 
         // 5. Configurar estados de seguridad de la cuenta
         userEntity.setCreateAt(LocalDate.now());
         userEntity.setAccountNonExpired(true);
         userEntity.setAccountNonLocked(true);
         userEntity.setCredentialsNonExpired(true);
-        userEntity.setEnabled(true); // El usuario está activo para poder iniciar el flujo de recuperación
+        userEntity.setEnabled(true);
 
         // 6. Guardar en Base de Datos
         UserEntity savedUser = userRepository.save(userEntity);

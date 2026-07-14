@@ -50,16 +50,16 @@ public class UserEntity {
     private LocalDate createAt;
 
     @Column(nullable = false)
-    private boolean isAccountNonExpired;
+    private boolean accountNonExpired;
 
     @Column(nullable = false)
-    private boolean isAccountNonLocked;
+    private boolean accountNonLocked;
 
     @Column(nullable = false)
-    private boolean isCredentialsNonExpired;
+    private boolean credentialsNonExpired;
 
     @Column(nullable = false)
-    private boolean isEnabled;
+    private boolean enabled;
 
 }
 

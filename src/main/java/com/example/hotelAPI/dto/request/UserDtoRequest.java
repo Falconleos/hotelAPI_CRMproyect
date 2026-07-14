@@ -1,15 +1,11 @@
 package com.example.hotelAPI.dto.request;
 
-import com.example.hotelAPI.model.RoleEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
-import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -86,10 +82,6 @@ public class UserDtoRequest {
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "the phone number is necessary")
-    @Pattern(
-            regexp = "^[0-9]{10}$",
-            message = "the phone number must contains at least 10 characters"
-    )
     private String phoneNumber;
 
     @Schema(

@@ -3,9 +3,16 @@ package com.example.hotelAPI.dto.response;
 import com.example.hotelAPI.model.RoleEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.Set;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Getter
+@Setter
 
 @Schema(description = "Datos detallados de perfil de usuario devueltos por la API")
 public class UserDtoResponse {
@@ -54,18 +61,18 @@ public class UserDtoResponse {
 
     @Column(nullable = false)
     @Schema(description = "Indica si la cuenta del usuario no ha expirado", example = "true")
-    private boolean isAccountNonExpired;
+    private boolean accountNonExpired;
 
     @Column(nullable = false)
     @Schema(description = "Indica si el usuario se encuentra desbloqueado", example = "true")
-    private boolean isAccountNonLocked;
+    private boolean accountNonLocked;
 
     @Column(nullable = false)
     @Schema(description = "Indica si las credenciales (contraseña) no han expirado", example = "true")
-    private boolean isCredentialsNonExpired;
+    private boolean credentialsNonExpired;
 
     @Column(nullable = false)
     @Schema(description = "Indica si la cuenta está habilitada y activa para operar", example = "true")
-    private boolean isEnabled;
+    private boolean enabled;
 
 }

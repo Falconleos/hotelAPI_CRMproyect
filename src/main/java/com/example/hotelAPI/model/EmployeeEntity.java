@@ -11,7 +11,7 @@ import lombok.*;
 @Builder
 @Entity
 @Table(name = "employees")
-public class EmployeeEntity extends UserEntity {
+public class EmployeeEntity{
 
     @Id
     private Long id;

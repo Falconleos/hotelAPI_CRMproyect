@@ -2,6 +2,7 @@ package com.example.hotelAPI.controller;
 
 import com.example.hotelAPI.dto.request.ChangePasswordDtoRequest;
 import com.example.hotelAPI.dto.request.UserDtoRequest;
+import com.example.hotelAPI.dto.request.UserDtoRequestCreation;
 import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.service.UserService;
 import com.example.hotelAPI.service.serviceImpl.AuthService;
@@ -56,8 +57,8 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "El email o DNI ya existen en el sistema"),
             @ApiResponse(responseCode = "403", description = "Acceso denegado")
     })
-    public ResponseEntity<UserDtoResponse> createUser(@Valid @RequestBody UserDtoRequest userDtoRequest) {
-        return new ResponseEntity<>(userService.createUser(userDtoRequest), HttpStatus.CREATED);
+    public ResponseEntity<UserDtoResponse> createUser(@Valid @RequestBody UserDtoRequestCreation userDtoRequestCreation) {
+        return new ResponseEntity<>(userService.createUserWithRole(userDtoRequestCreation), HttpStatus.CREATED);
     }
 
     /*------recepcionista o administrador obtienen por id y usuario solo su id---------------------------*/

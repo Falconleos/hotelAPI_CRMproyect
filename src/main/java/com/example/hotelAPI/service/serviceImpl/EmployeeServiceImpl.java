@@ -17,7 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class EmployeeServiceImple implements EmployeeService {
+public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final UserService userService; // Usamos composición inyectando el servicio de usuarios
