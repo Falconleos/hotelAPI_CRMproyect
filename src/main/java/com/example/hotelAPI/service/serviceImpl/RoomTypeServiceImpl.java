@@ -1,5 +1,6 @@
 package com.example.hotelAPI.service.serviceImpl;
 
+import com.example.hotelAPI.model.RoomEntity;
 import com.example.hotelAPI.model.RoomTypeEntity;
 import com.example.hotelAPI.repository.RoomTypeRepository;
 import com.example.hotelAPI.service.RoomTypeService;
@@ -59,9 +60,20 @@ public class RoomTypeServiceImpl implements RoomTypeService {
     @Override
     @Transactional
     public void deleteRoomType(Long id) {
-        if (!roomTypeRepository.existsById(id)) {
-            throw new EntityNotFoundException("Cannot delete. Room type not found with ID: " + id);
+        // 1. Recuperamos el RoomType con sus habitaciones
+        RoomTypeEntity roomType = roomTypeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cannot delete. Room type not found with ID: " + id));
+
+        // 2. Desvinculamos las habitaciones rompiendo la relación (las pasamos a null)
+        if (roomType.getRooms() != null && !roomType.getRooms().isEmpty()) {
+            for (RoomEntity room : roomType.getRooms()) {
+                room.setType(null); // Seteamos el tipo a null en cada habitación
+            }
+            // Limpiamos la lista para desvincularlas del contexto de persistencia
+            roomType.getRooms().clear();
         }
-        roomTypeRepository.deleteById(id);
+
+        // 3. Ahora sí, eliminamos el tipo de habitación de forma segura
+        roomTypeRepository.delete(roomType);
     }
 }
