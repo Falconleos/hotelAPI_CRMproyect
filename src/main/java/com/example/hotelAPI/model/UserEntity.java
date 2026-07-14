@@ -14,7 +14,6 @@ import java.util.Set;
 @Entity
 @Table(name = "users")
 @Builder
-@Inheritance(strategy = InheritanceType.JOINED)
 public class UserEntity {
 
     @Id
@@ -23,6 +22,7 @@ public class UserEntity {
 
     @Column(unique = true)
     private String username;
+
     private String password;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -50,16 +50,16 @@ public class UserEntity {
     private LocalDate createAt;
 
     @Column(nullable = false)
-    private boolean isAccountNonExpired;
+    private boolean accountNonExpired;
 
     @Column(nullable = false)
-    private boolean isAccountNonLocked;
+    private boolean accountNonLocked;
 
     @Column(nullable = false)
-    private boolean isCredentialsNonExpired;
+    private boolean credentialsNonExpired;
 
     @Column(nullable = false)
-    private boolean isEnabled;
+    private boolean enabled;
 
 }
 
