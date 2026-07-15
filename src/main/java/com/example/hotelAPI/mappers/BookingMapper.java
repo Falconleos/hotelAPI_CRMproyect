@@ -29,6 +29,7 @@ public interface BookingMapper {
     @Mapping(source = "room", target = "room")
     @Mapping(source = "totalPrice", target = "totalPrice")
     @Mapping(source = "active", target = "active")
+    @Mapping(source = "createdAt", target = "createdAt")
     BookingDTOResponse toDto(BookingEntity entity);
 
 }

@@ -17,7 +17,10 @@ public class BookingCancellationDTOResponse {
     private Long id;
 
     @Schema(description = "Detalles básicos de la reserva que fue cancelada")
-    private BookingDTOResponse booking; // Este lo definiremos en el siguiente paso
+    private BookingDTOResponse booking;
+
+    @Schema(description = "Detalles básicos del empleado que canceló")
+    private EmployeeDTOResponse employee;
 
     @Schema(description = "Motivo de la cancelación", example = "Problemas de salud")
     private String reason;

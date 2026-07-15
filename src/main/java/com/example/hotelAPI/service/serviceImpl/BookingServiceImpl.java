@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
@@ -118,6 +119,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setTotalPrice(totalPrice);
         booking.setActive(true);
         booking.setState(BookingState.PENDING);
+        booking.setCreatedAt(LocalDateTime.now());
 
         BookingEntity savedBooking = bookingRepository.save(booking);
         return bookingMapper.toDto(savedBooking);
@@ -148,8 +150,27 @@ public class BookingServiceImpl implements BookingService {
         booking.setActive(false);
         bookingRepository.save(booking);
 
+        //obtenemos al empleado del contexto
+        Object principal = SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        String employeeUsername = "";
+
+        if(principal instanceof UserDetails){
+            employeeUsername = ((UserDetails) principal).getUsername();
+        }
+
+        UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
+        EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
+
+        // Comprobamos si el usuario de este empleado está habilitado en el sistema
+        if (employee.getUser() != null && !employee.getUser().isEnabled()) {
+            throw new IllegalStateException("A disabled employee cannot generate a booking.");
+        }
+
         // Creamos la entidad física de cancelación
         BookingCancellationEntity cancellation = BookingCancellationEntity.builder()
+                .employee(employee)
                 .booking(booking)
                 .reason(request.getReason())
                 .build();

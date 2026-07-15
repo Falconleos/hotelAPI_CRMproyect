@@ -22,6 +22,10 @@ public class BookingCancellationEntity {
     @JoinColumn(name = "booking_id", referencedColumnName = "id", nullable = false)
     private BookingEntity booking;
 
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private EmployeeEntity employee;
+
     @Column(nullable = false)
     private LocalDateTime cancellationDate;
 

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,5 +53,9 @@ public class BookingDTOResponse {
 
     @Schema(description = "Indica si la reserva se encuentra activa")
     private Boolean active;
+
+    @Schema(description = "Indica el momento en que se tomó la reserva")
+    private LocalDateTime createdAt;
+
 
 }

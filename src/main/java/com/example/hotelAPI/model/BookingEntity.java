@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -61,5 +62,7 @@ public class BookingEntity {
     // Relación uno a uno con la cancelación (La crearemos en el paso siguiente)
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private BookingCancellationEntity cancellation;
+
+    private LocalDateTime createdAt;
 
 }

@@ -26,7 +26,7 @@ public class DataInitilizer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
-    private final EmployeeService employeeService;
+    private final EmployeeRepository employeeRepository;
     private final RoomTypeRepository roomTypeRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -70,16 +70,19 @@ public class DataInitilizer implements CommandLineRunner {
             // 🌟 CLAVE: Capturamos la entidad persistida devuelta por el save()
             UserEntity savedAdmin = userRepository.save(defaultAdmin);
             System.out.println(">> Default admin user successfully created (ID: " + savedAdmin.getId() + ") <<");
-            /*
-            // 🌟 Usamos savedAdmin.getId() que garantizadamente ya tiene el número de ID autogenerado
-            EmployeeDTORequest employeeDTORequest = EmployeeDTORequest.builder()
-                    .userId(savedAdmin.getId())
+
+            EmployeeEntity employeeEntity = EmployeeEntity.builder()
+                    .user(savedAdmin)
                     .shift(Shift.MORNING)
-                    .salary(800000.0)
+                    .salary(0.0)
                     .build();
 
-            employeeService.createEmployee(employeeDTORequest);
-            System.out.println(">> Default admin employee successfully created <<");*/
+            savedAdmin.setEmployee(employeeEntity);
+
+            employeeRepository.save(employeeEntity);
+            System.out.println(">> Default admin employee successfully created (ID: " + savedAdmin.getId() + ") <<");
+
+
         }
 
         // 3. Crear RoomType por defecto ("Basic") si no existe
