@@ -1,0 +1,81 @@
+package com.example.hotelAPI.service.serviceImpl;
+
+import com.example.hotelAPI.dto.response.BookingCancellationDTOResponse;
+import com.example.hotelAPI.mappers.BookingCancellationMapper;
+import com.example.hotelAPI.model.BookingCancellationEntity;
+import com.example.hotelAPI.repository.BookingCancellationRepository;
+import com.example.hotelAPI.service.BookingCancellationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class BookingCancellationServiceImpl implements BookingCancellationService {
+
+    private final BookingCancellationRepository repository;
+    private final BookingCancellationMapper mapper;
+
+    // 1. Búsqueda por ID
+    // 1.1. Devuelve entidad
+    @Override
+    @Transactional(readOnly = true)
+    public BookingCancellationEntity findEntityById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Invalid cancellation ID: " + id));
+    }
+
+    // 1.2. Devuelve DTOResponse
+    @Override
+    @Transactional(readOnly = true)
+    public BookingCancellationDTOResponse findById(Long id) {
+        return mapper.toDto(findEntityById(id));
+    }
+
+    // 2. Listar cancelaciones
+    // 2.1. Listar historial completo de cancelaciones
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingCancellationDTOResponse> getCancellationHistory() {
+        List<BookingCancellationEntity> cancellations = repository.findAll();
+        return cancellations.stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    // 2.2. Listar cancelaciones filtrando por el apellido del huésped principal
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingCancellationDTOResponse> findByGuestLastName(String lastName) {
+        List<BookingCancellationEntity> cancellations = repository.findAll();
+        return cancellations.stream()
+                .filter(c -> c.getBooking().getGuestLastName().toLowerCase().contains(lastName.toLowerCase()))
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    // 3. Crear registro de cancelación física
+    @Override
+    @Transactional
+    public BookingCancellationEntity create(BookingCancellationEntity cancellation) {
+        cancellation.setCancellationDate(LocalDateTime.now());
+        return repository.save(cancellation);
+    }
+
+    // 4. Depurar historial de cancelaciones de más de un mes de antigüedad
+    @Override
+    @Transactional
+    public void purgeCancellationHistory() {
+        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+
+        List<BookingCancellationEntity> oldCancellations = repository.findAll().stream()
+                .filter(c -> c.getCancellationDate().isBefore(oneMonthAgo))
+                .toList();
+
+        repository.deleteAllInBatch(oldCancellations);
+    }
+
+}

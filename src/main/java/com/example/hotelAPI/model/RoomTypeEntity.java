@@ -32,7 +32,7 @@ public class RoomTypeEntity {
     @Column(nullable = false)
     private Double pricePerNight;
 
-    @OneToMany(mappedBy = "type", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "type", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
     private List<RoomEntity> rooms = new ArrayList<>();
 

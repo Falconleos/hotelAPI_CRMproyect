@@ -61,6 +61,11 @@ public class UserEntity {
     @Column(nullable = false)
     private boolean enabled;
 
+    // Dentro de UserEntity.java
+    @OneToOne(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private EmployeeEntity employee;
+
 }
 
 
