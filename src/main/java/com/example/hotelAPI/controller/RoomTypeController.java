@@ -51,9 +51,9 @@ public class RoomTypeController {
         return ResponseEntity.ok(roomTypeMapper.toDto(entity));
     }
 
-    /*--------- Obtener todos los tipos de habitaciones (ADMIN y RECEPCIONIST) ---------------*/
+    /*--------- Obtener todos los tipos de habitaciones---------------*/
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST','GUEST')")
     @Operation(summary = "Listar todos los tipos de habitaciones")
     public ResponseEntity<List<RoomTypeDTOResponse>> getAll() {
         List<RoomTypeDTOResponse> list = roomTypeService.getAllRoomTypes().stream()

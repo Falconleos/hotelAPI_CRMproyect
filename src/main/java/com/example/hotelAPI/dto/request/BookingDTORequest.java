@@ -47,10 +47,6 @@ public class BookingDTORequest {
     @Schema(description = "Aclaraciones o pedidos especiales del pasajero", example = "Solicita cuna para bebé o vista externa")
     private String observation;
 
-    @NotNull(message = "Employee ID is required")
-    @Schema(description = "Identificador del empleado asignado que carga la reserva", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long employeeId;
-
     @NotNull(message = "Room ID is required")
     @Schema(description = "Identificador de la habitación física a reservar", example = "3", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long roomId;

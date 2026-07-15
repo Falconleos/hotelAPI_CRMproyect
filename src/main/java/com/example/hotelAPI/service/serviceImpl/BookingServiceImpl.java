@@ -5,6 +5,7 @@ import com.example.hotelAPI.dto.request.BookingDTORequest;
 import com.example.hotelAPI.dto.response.BookingCancellationDTOResponse;
 import com.example.hotelAPI.dto.response.BookingDTOResponse;
 import com.example.hotelAPI.dto.response.RoomDTOResponse;
+import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.enums.BookingState;
 import com.example.hotelAPI.mappers.BookingCancellationMapper;
 import com.example.hotelAPI.mappers.BookingMapper;
@@ -14,17 +15,17 @@ import com.example.hotelAPI.model.BookingEntity;
 import com.example.hotelAPI.model.EmployeeEntity;
 import com.example.hotelAPI.model.RoomEntity;
 import com.example.hotelAPI.repository.BookingRepository;
-import com.example.hotelAPI.service.BookingCancellationService;
-import com.example.hotelAPI.service.BookingService;
-import com.example.hotelAPI.service.EmployeeService;
-import com.example.hotelAPI.service.RoomService;
+import com.example.hotelAPI.service.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private final RoomService roomService;
     private final RoomMapper roomMapper;
 
+    private final UserService userService;
     private final EmployeeService employeeService;
 
     // 1. Busqueda por ID
@@ -78,13 +80,7 @@ public class BookingServiceImpl implements BookingService {
             throw new IllegalArgumentException("The check-out date must be after the check-in date.");
         }
 
-        EmployeeEntity employee = employeeService.findEntityById(request.getEmployeeId());
         RoomEntity room = roomService.findEntityById(request.getRoomId());
-
-        // Comprobamos si el usuario de este empleado está habilitado en el sistema
-        if (employee.getUser() != null && !employee.getUser().isEnabled()) {
-            throw new IllegalStateException("A disabled employee cannot generate a booking.");
-        }
 
         // Accedemos a la capacidad a través del Tipo de Habitación (RoomType)
         if (room.getType().getCapacity() < request.getGuestCount()) {
@@ -97,6 +93,24 @@ public class BookingServiceImpl implements BookingService {
 
         long days = ChronoUnit.DAYS.between(request.getCheckIn(), request.getCheckOut());
         double totalPrice = room.getType().getPricePerNight() * days;
+
+        //obtenemos al empleado del contexto
+        Object principal = SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        String employeeUsername = "";
+
+        if(principal instanceof UserDetails){
+            employeeUsername = ((UserDetails) principal).getUsername();
+        }
+
+        UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
+        EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
+
+        // Comprobamos si el usuario de este empleado está habilitado en el sistema
+        if (employee.getUser() != null && !employee.getUser().isEnabled()) {
+            throw new IllegalStateException("A disabled employee cannot generate a booking.");
+        }
 
         BookingEntity booking = bookingMapper.toEntity(request);
         booking.setEmployee(employee);

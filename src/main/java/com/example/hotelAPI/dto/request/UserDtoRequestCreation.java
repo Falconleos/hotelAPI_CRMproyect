@@ -47,7 +47,6 @@ public class UserDtoRequestCreation {
 
     @Schema(description = "Número de teléfono celular (exactamente 10 dígitos numéricos)", example = "1122334455", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "the phone number is necessary")
-    @Pattern(regexp = "^[0-9]{10}$", message = "the phone number must contains at least 10 characters")
     private String phoneNumber;
 
     @Schema(description = "Fecha de nacimiento (debe ser una fecha pasada)", example = "1995-05-15", type = "string", format = "date")

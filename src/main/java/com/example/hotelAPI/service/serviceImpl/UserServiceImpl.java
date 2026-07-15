@@ -123,7 +123,12 @@ public class UserServiceImpl implements UserService {
     public UserDtoResponse userByDni(String dni) {
         UserEntity userEntity = userRepository.findByDni(dni)
                 .orElseThrow( ()->new RuntimeException("user does not exist with dni: " + dni) );
-
         return userMapper.toDto(userEntity);
+    }
+
+    @Override
+    public UserDtoResponse findByUsername(String username) {
+        return userMapper.toDto(userRepository.findByUsername(username)
+                .orElseThrow(()->new UsernameNotFoundException("username inexistent")));
     }
 }

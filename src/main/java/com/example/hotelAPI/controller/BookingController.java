@@ -92,8 +92,8 @@ public class BookingController {
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST','GUEST')")
     @Operation(summary = "Listar habitaciones disponibles según fechas y huéspedes")
     public ResponseEntity<List<RoomDTOResponse>> getAvailableRooms(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate checkIn,
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd")    LocalDate checkOut,
             @PathVariable Integer guestCount
     ) {
         List<RoomDTOResponse> available = bookingService.getAvailableRooms(checkIn, checkOut, guestCount);

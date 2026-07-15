@@ -78,7 +78,6 @@ public class UserDtoRequest {
     @Schema(
             description = "Número de teléfono celular (exactamente 10 dígitos numéricos)",
             example = "1122334455",
-            pattern = "^[0-9]{10}$",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
     @NotBlank(message = "the phone number is necessary")

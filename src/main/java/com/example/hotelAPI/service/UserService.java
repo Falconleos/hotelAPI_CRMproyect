@@ -15,4 +15,6 @@ public interface UserService {
     void deleteUser (Long id);
     UserDtoResponse updateUser(Long id, UserDtoRequest userDtoRequest);
     UserDtoResponse userByDni(String dni);
+    UserDtoResponse findByUsername(String username);
+
 }
