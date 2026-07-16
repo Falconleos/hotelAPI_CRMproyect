@@ -20,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/private/check-in")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "Check-In Controller", description = "Endpoints para la gestión de ingresos, estadías y egresos (Check-Out) del hotel")
 public class CheckInController {
 

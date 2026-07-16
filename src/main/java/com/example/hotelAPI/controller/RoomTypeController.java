@@ -21,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/room-type")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "GestionTipoHabitaciones", description = "Endpoints privados para administrar las categorías y tipos de habitaciones del hotel")
 public class RoomTypeController {
 
