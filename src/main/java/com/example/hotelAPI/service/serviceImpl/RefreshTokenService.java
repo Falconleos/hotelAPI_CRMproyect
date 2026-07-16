@@ -1,5 +1,6 @@
 package com.example.hotelAPI.service.serviceImpl;
 
+import com.example.hotelAPI.exceptions.InvalidTokenException;
 import com.example.hotelAPI.model.RefreshTokenEntity;
 import com.example.hotelAPI.model.UserEntity;
 import com.example.hotelAPI.repository.RefreshTokenRepository;
@@ -37,7 +38,7 @@ public class RefreshTokenService {
     public RefreshTokenEntity verifyExpiration(RefreshTokenEntity refreshTokenEntity){
         if(refreshTokenEntity.getExpireDate().compareTo(Instant.now())<0){
             refreshTokenRepository.delete(refreshTokenEntity);
-            throw new RuntimeException("Refresh token is expired. Please login again");
+            throw new InvalidTokenException("Refresh token is expired. Please login again");
         }
         return refreshTokenEntity;
     }

@@ -7,6 +7,7 @@ import com.example.hotelAPI.dto.response.BookingDTOResponse;
 import com.example.hotelAPI.dto.response.RoomDTOResponse;
 import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.enums.BookingState;
+import com.example.hotelAPI.exceptions.*;
 import com.example.hotelAPI.mappers.BookingCancellationMapper;
 import com.example.hotelAPI.mappers.BookingMapper;
 import com.example.hotelAPI.mappers.RoomMapper;
@@ -49,7 +50,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public BookingEntity findEntityById(Long id) {
         return bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + id));
+                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID: " + id));
     }
 
     @Override
@@ -78,18 +79,18 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingDTOResponse createBooking(BookingDTORequest request) {
         if (!request.getCheckOut().isAfter(request.getCheckIn())) {
-            throw new IllegalArgumentException("The check-out date must be after the check-in date.");
+            throw new InvalidDateException("The check-out date must be after the check-in date.");
         }
 
         RoomEntity room = roomService.findEntityById(request.getRoomId());
 
         // Accedemos a la capacidad a través del Tipo de Habitación (RoomType)
         if (room.getType().getCapacity() < request.getGuestCount()) {
-            throw new IllegalArgumentException("Room capacity exceeded for the requested guest count.");
+            throw new CapacityOutOfRangeException("Room capacity exceeded for the requested guest count.");
         }
 
         if (!getAvailableRoomsEntities(request.getCheckIn(), request.getCheckOut(), request.getGuestCount()).contains(room)) {
-            throw new IllegalStateException("The selected room is not available for these dates.");
+            throw new DisabledRoomException("The selected room is not available for these dates.");
         }
 
         long days = ChronoUnit.DAYS.between(request.getCheckIn(), request.getCheckOut());
@@ -110,7 +111,7 @@ public class BookingServiceImpl implements BookingService {
 
         // Comprobamos si el usuario de este empleado está habilitado en el sistema
         if (employee.getUser() != null && !employee.getUser().isEnabled()) {
-            throw new IllegalStateException("A disabled employee cannot generate a booking.");
+            throw new DisabledUserException("A disabled employee cannot generate a booking.");
         }
 
         BookingEntity booking = bookingMapper.toEntity(request);
@@ -131,18 +132,18 @@ public class BookingServiceImpl implements BookingService {
     public BookingCancellationDTOResponse cancelBooking(BookingCancellationDTORequest request) {
         BookingEntity booking = findEntityById(request.getBookingId());
 
-        // Validamos que el estado de la reserva permita la cancelación
+
         if (booking.getState() == BookingState.CHECKED_IN) {
-            throw new IllegalStateException("The guest has already checked in. You can only interrupt the stay.");
+            throw new BookingStateConflictException("The guest has already checked in. You can only interrupt the stay.");
         }
         if (booking.getState() == BookingState.NO_SHOW) {
-            throw new IllegalStateException("This booking is already inactive due to a No-Show.");
+            throw new BookingStateConflictException("This booking is already inactive due to a No-Show.");
         }
         if (booking.getState() == BookingState.CONCLUDED) {
-            throw new IllegalStateException("Cannot cancel a concluded booking.");
+            throw new BookingStateConflictException("Cannot cancel a concluded booking.");
         }
         if (booking.getState() == BookingState.CANCELLED) {
-            throw new IllegalStateException("This booking is already cancelled.");
+            throw new BookingStateConflictException("This booking is already cancelled.");
         }
 
         // Actualizamos estado de la reserva
@@ -165,7 +166,7 @@ public class BookingServiceImpl implements BookingService {
 
         // Comprobamos si el usuario de este empleado está habilitado en el sistema
         if (employee.getUser() != null && !employee.getUser().isEnabled()) {
-            throw new IllegalStateException("A disabled employee cannot generate a booking.");
+            throw new DisabledUserException("A disabled employee cannot generate a booking.");
         }
 
         // Creamos la entidad física de cancelación
@@ -192,7 +193,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingDTOResponse confirmBooking(Long id) {
         BookingEntity booking = findEntityById(id);
         if (booking.getState() != BookingState.PENDING) {
-            throw new IllegalStateException("Current booking state is: " + booking.getState() + ". To confirm, it must be PENDING.");
+            throw new BookingStateConflictException("Current booking state is: " + booking.getState() + ". To confirm, it must be PENDING.");
         }
         booking.setState(BookingState.CONFIRMED);
         return bookingMapper.toDto(bookingRepository.save(booking));

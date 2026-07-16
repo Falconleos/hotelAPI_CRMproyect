@@ -8,6 +8,10 @@ import com.example.hotelAPI.dto.response.AuthSuccessDtoResponse;
 import com.example.hotelAPI.dto.response.AuthTokenResponse;
 import com.example.hotelAPI.dto.response.RefreshTokenDtoResponse;
 import com.example.hotelAPI.enums.Role;
+import com.example.hotelAPI.exceptions.InvalidNameException;
+import com.example.hotelAPI.exceptions.InvalidPasswordException;
+import com.example.hotelAPI.exceptions.InvalidTokenException;
+import com.example.hotelAPI.exceptions.UserNotFoundException;
 import com.example.hotelAPI.jwt.JwtService;
 import com.example.hotelAPI.mappers.UserMapper;
 import com.example.hotelAPI.model.PasswordResetTokenEntity;
@@ -56,7 +60,7 @@ public class AuthService {
     public AuthSuccessDtoResponse register(UserDtoRequest request){
 
         RoleEntity guestRole = roleRepository.findByName(Role.GUEST)
-                .orElseThrow(() -> new RuntimeException("no rol named GUEST"));
+                .orElseThrow(() -> new InvalidNameException("no rol named GUEST"));
 
         UserEntity userEntity = userMapper.toEntity(request);
             userEntity.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -110,7 +114,7 @@ public class AuthService {
                 .map(userEntity -> {
                     String newAccessToken = jwtService.generateToken(new CustomUserDetails(userEntity));
                     return new RefreshTokenDtoResponse(newAccessToken);
-                }).orElseThrow(()->new RuntimeException("the refresh token does not exist on database"));
+                }).orElseThrow(()->new InvalidTokenException("the refresh token does not exist on database"));
 
     }
 
@@ -159,11 +163,11 @@ public class AuthService {
     public void resetPassword(ResetPasswordDtoRequest request) {
 
         PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new RuntimeException("invalid or inexistent recuperation token"));
+                .orElseThrow(() -> new InvalidTokenException("invalid or inexistent recuperation token"));
 
         if (resetToken.isExpired()) {
             passwordResetTokenRepository.delete(resetToken); // Limpieza opcional
-            throw new RuntimeException("recuperation token is expired");
+            throw new InvalidTokenException("recuperation token is expired");
         }
 
         UserEntity user = resetToken.getUserEntity();
@@ -180,14 +184,14 @@ public class AuthService {
                 .getName();
 
         if (username == null || username.equals("anonymousUser")) {
-            throw new RuntimeException("no authenticated user");
+            throw new UserNotFoundException("no authenticated user");
         }
 
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("user not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("password does not match");
+            throw new InvalidPasswordException("password does not match");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

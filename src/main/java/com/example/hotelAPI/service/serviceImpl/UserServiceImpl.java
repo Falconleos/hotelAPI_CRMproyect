@@ -4,6 +4,10 @@ import com.example.hotelAPI.dto.request.UserDtoRequest;
 import com.example.hotelAPI.dto.request.UserDtoRequestCreation;
 import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.enums.Role;
+import com.example.hotelAPI.exceptions.DuplicatedDNIException;
+import com.example.hotelAPI.exceptions.DuplicatedEmailException;
+import com.example.hotelAPI.exceptions.InvalidNameException;
+import com.example.hotelAPI.exceptions.UserNotFoundException;
 import com.example.hotelAPI.mappers.UserMapper;
 import com.example.hotelAPI.model.RoleEntity;
 import com.example.hotelAPI.model.UserEntity;
@@ -54,10 +58,10 @@ public class UserServiceImpl implements UserService {
     public UserDtoResponse createUserWithRole(UserDtoRequestCreation request) {
         // 1. Validaciones de existencia
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("email already exists");
+            throw new DuplicatedEmailException("email already exists");
         }
         if (userRepository.existsByDni(request.getDni())) {
-            throw new RuntimeException("dni already exists");
+            throw new DuplicatedDNIException("dni already exists");
         }
 
         // 2. Mapear DTO a Entidad
@@ -65,7 +69,7 @@ public class UserServiceImpl implements UserService {
 
         // 3. Obtener el rol dinámico enviado en el request
         RoleEntity userRole = roleRepository.findByName(request.getRole())
-                .orElseThrow(() -> new RuntimeException("No role named: " + request.getRole()));
+                .orElseThrow(() -> new InvalidNameException("No role named: " + request.getRole()));
         userEntity.setRoles(Set.of(userRole));
 
         // 4. Encriptar contraseña provista
@@ -100,13 +104,13 @@ public class UserServiceImpl implements UserService {
         // 2. Validar DNI: si el DNI ingresado es diferente al actual, verificar que no exista en otro usuario
         if (!userEntity.getDni().equals(userDtoRequest.getDni()) &&
                 userRepository.existsByDni(userDtoRequest.getDni())) {
-            throw new RuntimeException("Dni already exists");
+            throw new DuplicatedDNIException("Dni already exists");
         }
 
         // 3. Validar Email: si el Email ingresado es diferente al actual, verificar duplicados
         if (!userEntity.getEmail().equals(userDtoRequest.getEmail()) &&
                 userRepository.existsByEmail(userDtoRequest.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicatedEmailException("Email already exists");
         }
 
         // 4. Modificaciones (Agregamos el DNI aquí para que efectivamente se actualice si cambió)
@@ -122,7 +126,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDtoResponse userByDni(String dni) {
         UserEntity userEntity = userRepository.findByDni(dni)
-                .orElseThrow( ()->new RuntimeException("user does not exist with dni: " + dni) );
+                .orElseThrow( ()->new UserNotFoundException("user does not exist with dni: " + dni) );
         return userMapper.toDto(userEntity);
     }
 
