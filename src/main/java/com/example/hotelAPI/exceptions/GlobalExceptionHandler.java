@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
                 .body( new ErrorDTOResponse(ex.getMessage(), webRequest.getDescription(false)) );
     }
 
-    @ExceptionHandler(DisabledRoomException.class)
+    @ExceptionHandler(DuplicatedRoomException.class)
     public ResponseEntity<ErrorDTOResponse>handleInvalidId(DuplicatedRoomException ex, WebRequest webRequest){
 
         return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -206,14 +206,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorDTOResponse>handleInvalidId(InvalidPasswordException ex, WebRequest webRequest){
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body( new ErrorDTOResponse(ex.getMessage(), webRequest.getDescription(false)) );
-
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorDTOResponse>handleInvalidId(UserNotFoundException ex, WebRequest webRequest){
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body( new ErrorDTOResponse(ex.getMessage(), webRequest.getDescription(false)) );
 
     }
