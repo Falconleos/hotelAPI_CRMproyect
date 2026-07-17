@@ -3,6 +3,8 @@ package com.example.hotelAPI.service.serviceImpl;
 import com.example.hotelAPI.dto.request.EmployeeDTORequest;
 import com.example.hotelAPI.dto.response.EmployeeDTOResponse;
 import com.example.hotelAPI.enums.Shift;
+import com.example.hotelAPI.exceptions.DuplicatedUserException;
+import com.example.hotelAPI.exceptions.UserNotFoundException;
 import com.example.hotelAPI.mappers.EmployeeMapper;
 import com.example.hotelAPI.model.EmployeeEntity;
 import com.example.hotelAPI.model.UserEntity;
@@ -26,7 +28,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeEntity findEntityById(Long id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado con ID: " + id));
+                .orElseThrow(() -> new UserNotFoundException("Empleado no encontrado con ID: " + id));
     }
 
     @Override
@@ -46,7 +48,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public EmployeeDTOResponse createEmployee(EmployeeDTORequest request) {
         // 3.1. Validar que no exista ya un perfil de empleado para ese ID de usuario
         if (employeeRepository.existsById(request.getUserId())) {
-            throw new RuntimeException("El usuario ya tiene un perfil de empleado registrado.");
+            throw new DuplicatedUserException("El usuario ya tiene un perfil de empleado registrado.");
         }
 
         // 3.2. Recuperar la entidad User usando el UserService que ya creaste
@@ -89,7 +91,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public EmployeeDTOResponse cambiarTurno(Long id, Shift nuevoShift) {
         EmployeeEntity employee = findEntityById(id);
         if (employee.getShift().equals(nuevoShift)) {
-            throw new RuntimeException("El empleado ya se encuentra asignado a ese turno");
+            throw new IllegalArgumentException("El empleado ya se encuentra asignado a ese turno");
         }
         employee.setShift(nuevoShift);
         return employeeMapper.toDto(employee);

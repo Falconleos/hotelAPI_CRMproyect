@@ -22,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/user")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "GestionUsuarios", description = "Endpoints privados para la gestión de funcionalidades de usuarios")
 
 public class UserController {

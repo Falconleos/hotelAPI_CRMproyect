@@ -3,9 +3,11 @@ package com.example.hotelAPI.service.serviceImpl;
 import com.example.hotelAPI.dto.request.BookingCancellationDTORequest;
 import com.example.hotelAPI.dto.request.CheckInDTORequest;
 import com.example.hotelAPI.dto.response.CheckInDTOResponse;
+import com.example.hotelAPI.dto.response.UserDtoResponse;
 import com.example.hotelAPI.enums.BookingState;
 import com.example.hotelAPI.enums.CheckInState;
 import com.example.hotelAPI.enums.RoomState;
+import com.example.hotelAPI.exceptions.*;
 import com.example.hotelAPI.mappers.CheckInMapper;
 import com.example.hotelAPI.model.*;
 import com.example.hotelAPI.repository.CheckInRepository;
@@ -13,6 +15,8 @@ import com.example.hotelAPI.service.CheckInService;
 import com.example.hotelAPI.service.EmployeeService;
 import com.example.hotelAPI.service.RoomService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +43,7 @@ public class CheckInServiceImpl implements CheckInService {
     @Override
     public CheckInEntity getEntityById(Long id) {
         return checkInRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Check-in registration not found"));
+                .orElseThrow(() -> new CheckInNotFoundException("Check-in registration not found"));
     }
 
     // 1.2. Returns DTOResponse
@@ -63,7 +67,7 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // 6. Other searches
-    // 6.1. List check-ins by state (CURRENT, COMPLETED, INTERRUPTED)
+    // 6.1. List check-ins by state (CURRENTLY_ACTIVE, COMPLETED, INTERRUPTED)
     @Override
     public List<CheckInDTOResponse> findByState(CheckInState state) {
         return checkInRepository.findByCheckInState(state).stream()
@@ -121,9 +125,26 @@ public class CheckInServiceImpl implements CheckInService {
     public CheckInDTOResponse checkIn(CheckInDTORequest request) {
         BookingEntity booking = bookingService.findEntityById(request.getBookingId());
         RoomEntity room = booking.getRoom();
-        EmployeeEntity employee = employeeService.findEntityById(request.getEmployeeId());
-        UserEntity guest = userService.findEntityById(request.getUserId());
 
+        //obtenemos al empleado del contexto
+        Object principal = SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        String employeeUsername = "";
+
+        if(principal instanceof UserDetails){
+            employeeUsername = ((UserDetails) principal).getUsername();
+        }
+
+        UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
+        EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
+
+        // Comprobamos si el usuario de este empleado está habilitado en el sistema
+        if (employee.getUser() != null && !employee.getUser().isEnabled()) {
+            throw new DisabledUserException("A disabled employee cannot generate a check-in.");
+        }
+
+        UserEntity guest = userService.findEntityById(request.getUserId());
         validations(booking, room, employee, guest);
 
         CheckInEntity checkIn = checkInMapper.toEntity(request);
@@ -151,30 +172,30 @@ public class CheckInServiceImpl implements CheckInService {
                              EmployeeEntity employee,
                              UserEntity guest) {
         if (booking == null) {
-            throw new RuntimeException("Booking with that ID does not exist");
+            throw new BookingNotFoundException("Booking with that ID does not exist");
         }
         if (guest == null) {
-            throw new RuntimeException("Guest with that ID does not exist");
+            throw new UserNotFoundException("Guest with that ID does not exist");
         }
         if (employee == null) {
-            throw new RuntimeException("Employee with that ID does not exist");
+            throw new UserNotFoundException("Employee with that ID does not exist");
         }
         if (!employee.getUser().isEnabled()) { // Usando getEnabled() según tu UserDtoResponse / UserEntity
-            throw new RuntimeException("A disabled employee cannot process a check-in");
+            throw new DisabledUserException("A disabled employee cannot process a check-in");
         }
         if (!booking.getActive()) {
-            throw new RuntimeException("Invalid check-in due to booking status: " + booking.getState());
+            throw new BookingStateConflictException("Invalid check-in due to booking status: " + booking.getState());
         }
         if (booking.getState().equals(BookingState.CHECKED_IN)) {
-            throw new RuntimeException("This booking has already been checked in");
+            throw new BookingStateConflictException("This booking has already been checked in");
         }
         if (room.getState().equals(RoomState.MAINTENANCE) || room.getState().equals(RoomState.OCCUPIED)) {
-            throw new RuntimeException("Check-in impossible because room " + room.getNumber() + " is " + room.getState());
+            throw new InvalidCheckInException("Check-in impossible because room " + room.getNumber() + " is " + room.getState());
         }
 
         LocalDate today = LocalDate.now();
         if (booking.getCheckIn().isBefore(today) || booking.getCheckIn().isAfter(today)) {
-            throw new RuntimeException("Check-in is only allowed on the exact day of the reservation's start date");
+            throw new InvalidCheckInException("Check-in is only allowed on the exact day of the reservation's start date.");
         }
     }
 
@@ -191,14 +212,14 @@ public class CheckInServiceImpl implements CheckInService {
 
         checkIn.setCheckInState(CheckInState.INTERRUPTED);
         checkIn.setActive(false);
-        checkInRepository.save(checkIn);
+        checkInRepository.save(checkIn);//persiste el checkIn
 
         // Cancelación de la reserva/estadía restante
-        booking.setState(BookingState.PENDING); // Retorna temporalmente para poder cancelarla si tu lógica lo requiere
-        bookingService.cancelBooking(new BookingCancellationDTORequest(booking.getId(),reason)); // Adapta la firma de tu método de cancelación si difiere
+        booking.setState(BookingState.PENDING);//cambia temporalmente a pendiente para cancelarla
+        bookingService.cancelBooking(new BookingCancellationDTORequest(booking.getId(),reason));
 
         room.setState(RoomState.AVAILABLE);
-        roomService.updateRoom(room);
+        roomService.updateRoom(room);//persiste cambios en habitacion
 
         return checkInMapper.toDto(checkIn);
     }
@@ -206,16 +227,16 @@ public class CheckInServiceImpl implements CheckInService {
     // 8.2. Validate interruption parameters
     private void validationsInterruption(CheckInEntity checkIn) {
         if (checkIn.getBookingEntity().getCheckOut().equals(LocalDate.now())) {
-            throw new RuntimeException("The stay cannot be interrupted because checkout is today");
+            throw new InvalidDateException("The stay cannot be interrupted because checkout is today");
         }
         if (checkIn.getCheckInState().equals(CheckInState.COMPLETED)) {
-            throw new RuntimeException("The stay has already completed");
+            throw new BookingStateConflictException("The stay has already completed");
         }
         if (!checkIn.getPaid()) {
-            throw new RuntimeException("The stay must be settled/paid before interrupting");
+            throw new BookingStateConflictException("The stay must be settled/paid before interrupting");
         }
         if (checkIn.getCheckInState().equals(CheckInState.INTERRUPTED)) {
-            throw new RuntimeException("The stay is already interrupted");
+            throw new BookingStateConflictException("The stay is already interrupted");
         }
     }
 
@@ -234,7 +255,7 @@ public class CheckInServiceImpl implements CheckInService {
         checkIn.setActive(false);
         checkInRepository.save(checkIn);
 
-        booking.setState(BookingState.CONCLUDED); // O el estado final que uses (ej. COMPLETED / CONCLUDED)
+        booking.setState(BookingState.CONCLUDED);
         bookingService.update(booking);
 
         room.setState(RoomState.AVAILABLE); // Liberamos la habitación al hacer el checkout
@@ -246,10 +267,10 @@ public class CheckInServiceImpl implements CheckInService {
     // 9.2. Validate checkout parameters
     private void validationsCheckOut(CheckInEntity checkIn) {
         if (checkIn.getBookingEntity().getCheckOut().isAfter(LocalDate.now())) {
-            throw new RuntimeException("Checkout cannot be performed early. Use the 'interrupt' option instead");
+            throw new BookingStateConflictException("Checkout cannot be performed early. Use the 'interrupt' option instead");
         }
         if (!checkIn.getPaid()) {
-            throw new RuntimeException("The stay must be paid prior to checkout");
+            throw new BookingStateConflictException("The stay must be paid prior to checkout");
         }
     }
 
@@ -261,7 +282,7 @@ public class CheckInServiceImpl implements CheckInService {
 
         if (!checkOutDate.equals(LocalDate.now())) {
             if (checkIn.getPaid()) {
-                throw new RuntimeException("The stay is already paid");
+                throw new BookingStateConflictException("The stay is already paid");
             }
         }
 
@@ -315,18 +336,18 @@ public class CheckInServiceImpl implements CheckInService {
     @Override
     public Map<String, Double> revenueByMonthAndYear(Integer year) {
         if (year == null) {
-            throw new RuntimeException("The year parameter cannot be null");
+            throw new InvalidDateException("The year parameter cannot be null");
         }
 
         int currentYear = LocalDate.now().getYear();
         int baseYear = 2024;
 
         if (year > currentYear) {
-            throw new RuntimeException("Cannot request revenue for a future year");
+            throw new InvalidDateException("Cannot request revenue for a future year");
         }
 
         if (year < baseYear) {
-            throw new IllegalArgumentException("The requested year is prior to the hotel operations start year (" + baseYear + ")");
+            throw new InvalidDateException("The requested year is prior to the hotel operations start year (" + baseYear + ")");
         }
 
         return checkInRepository.findAll().stream()

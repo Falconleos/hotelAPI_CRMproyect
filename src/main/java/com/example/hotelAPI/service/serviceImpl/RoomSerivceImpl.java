@@ -4,6 +4,9 @@ import com.example.hotelAPI.dto.request.RoomDTORequest;
 import com.example.hotelAPI.dto.request.RoomUpdateDTO;
 import com.example.hotelAPI.dto.response.RoomDTOResponse;
 import com.example.hotelAPI.enums.RoomState;
+import com.example.hotelAPI.exceptions.DuplicatedRoomException;
+import com.example.hotelAPI.exceptions.RoomNotFoundException;
+import com.example.hotelAPI.exceptions.RoomUnderMaintenanceException;
 import com.example.hotelAPI.mappers.RoomMapper;
 import com.example.hotelAPI.model.RoomEntity;
 import com.example.hotelAPI.model.RoomTypeEntity;
@@ -29,7 +32,7 @@ public class RoomSerivceImpl implements RoomService {
     @Transactional(readOnly = true)
     public RoomEntity findEntityById(Long id) {
         return roomRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Room not found with ID: " + id));
+                .orElseThrow(() -> new RoomNotFoundException("Room not found with ID: " + id));
     }
 
     @Override
@@ -58,12 +61,12 @@ public class RoomSerivceImpl implements RoomService {
     public RoomDTOResponse save(RoomDTORequest dto) {
         // 1. Validación de número único
         if (roomRepository.findByNumber(dto.getNumber()).isPresent()) {
-            throw new RuntimeException("A room with number " + dto.getNumber() + " already exists.");
+            throw new DuplicatedRoomException("A room with number " + dto.getNumber() + " already exists.");
         }
 
         // 2. Buscar y asociar el RoomTypeEntity obligatorio
         RoomTypeEntity roomType = roomTypeRepository.findById(dto.getRoomTypeId())
-                .orElseThrow(() -> new RuntimeException("Room Type not found with ID: " + dto.getRoomTypeId()));
+                .orElseThrow(() -> new RoomNotFoundException("Room Type not found with ID: " + dto.getRoomTypeId()));
 
         // 3. Mapeo y seteo de estado inicial
         RoomEntity room = roomMapper.toEntity(dto);
@@ -80,7 +83,7 @@ public class RoomSerivceImpl implements RoomService {
         RoomEntity room = findEntityById(id);
 
         if (room.getState() == RoomState.OCCUPIED) {
-            throw new RuntimeException("Cannot delete an occupied room.");
+            throw new IllegalArgumentException("Cannot delete an occupied room.");
         }
 
         /* Validación de reservas pendientes adaptada al nuevo modelo
@@ -99,7 +102,7 @@ public class RoomSerivceImpl implements RoomService {
         // Si el DTO incluye un cambio de tipo de habitación, lo actualizamos
         if (dto.getRoomTypeId() != null && !dto.getRoomTypeId().equals(room.getType().getId())) {
             RoomTypeEntity newType = roomTypeRepository.findById(dto.getRoomTypeId())
-                    .orElseThrow(() -> new RuntimeException("Room Type not found with ID: " + dto.getRoomTypeId()));
+                    .orElseThrow(() -> new RoomNotFoundException("Room Type not found with ID: " + dto.getRoomTypeId()));
             room.setType(newType);
         }
 
@@ -120,7 +123,7 @@ public class RoomSerivceImpl implements RoomService {
         RoomEntity room = findEntityById(id);
 
         if (room.getState() == RoomState.MAINTENANCE) {
-            throw new RuntimeException("The room is already under maintenance.");
+            throw new RoomUnderMaintenanceException("The room is already under maintenance.");
         }
 
         room.setState(RoomState.MAINTENANCE);

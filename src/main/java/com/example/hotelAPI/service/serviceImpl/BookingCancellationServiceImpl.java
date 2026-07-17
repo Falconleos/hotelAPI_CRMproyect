@@ -1,6 +1,7 @@
 package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.dto.response.BookingCancellationDTOResponse;
+import com.example.hotelAPI.exceptions.InvalidIdException;
 import com.example.hotelAPI.mappers.BookingCancellationMapper;
 import com.example.hotelAPI.model.BookingCancellationEntity;
 import com.example.hotelAPI.repository.BookingCancellationRepository;
@@ -25,7 +26,7 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
     @Transactional(readOnly = true)
     public BookingCancellationEntity findEntityById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Invalid cancellation ID: " + id));
+                .orElseThrow(() -> new InvalidIdException("Invalid cancellation ID: " + id));
     }
 
     // 1.2. Devuelve DTOResponse

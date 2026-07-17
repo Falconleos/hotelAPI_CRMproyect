@@ -20,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/employee")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 @Tag(name = "GestionEmpleados", description = "Endpoints privados para la administración del personal del hotel")
 public class EmployeeController {
 
