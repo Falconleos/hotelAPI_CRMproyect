@@ -234,6 +234,16 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "error", "Autenticación fallida",
+                        "message", "Usuario o contraseña incorrectos"
+                ));
+    }
+
     /// /////////////////////
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorDTOResponse>handleInvalidId(Exception ex, WebRequest webRequest){
