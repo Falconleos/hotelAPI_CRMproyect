@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/room")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Tag(name = "GestionHabitaciones", description = "Endpoints privados para administrar las habitaciones físicas del hotel")
 public class RoomController {
 

@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/booking-cancellation")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Tag(name = "BookingCancellation", description = "Endpoints para la auditoría y control de cancelaciones de reservas")
 public class BookingCancellationController {
 
