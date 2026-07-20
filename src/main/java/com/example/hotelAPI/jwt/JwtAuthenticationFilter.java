@@ -1,6 +1,7 @@
 package com.example.hotelAPI.jwt;
 
 import com.example.hotelAPI.security.UserDetailsService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,35 +28,59 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        String requestURI = request.getRequestURI();
+
+        // 1. Si la petición va a un endpoint público, dejamos pasar de largo sin validar nada
+        if (requestURI.startsWith("/public/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         final String token;
         final String username;
 
-        if(authHeader==null || !authHeader.startsWith("Bearer ")){
-            filterChain.doFilter(request,response);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
             return;
         }
 
         token = authHeader.substring(7);
-        username = jwtService.extractUsername(token);
 
-        if(username!=null && SecurityContextHolder.getContext().getAuthentication()==null){
+        try {
+            // Intentamos extraer el username. Si está expirado, saltará la excepción acá
+            username = jwtService.extractUsername(token);
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            if(jwtService.isValid(token,userDetails)){
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                // Reemplazamos isValid para evitar el re-parseo que rompía el flujo interno
+                if (userDetails.getUsername().equals(username)) {
+
+                    // LINEA DE DEBUG: Verificamos en la consola de Spring qué autoridades se inyectan
+                    System.out.println("AUTORIDADES CARGADAS EN EL FILTRO: " + userDetails.getAuthorities());
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
-
+        } catch (ExpiredJwtException e) {
+            // 2. Si el token expiró en una ruta privada, respondemos con 403 de forma limpia
+            System.out.println("El filtro rechazó la petición porque el JWT expiró.");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"El token ha expirado\"}");
+            return;
         }
-        filterChain.doFilter(request,response);
+
+        filterChain.doFilter(request, response);
     }
 }
