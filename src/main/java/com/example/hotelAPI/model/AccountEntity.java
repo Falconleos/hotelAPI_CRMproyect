@@ -30,9 +30,8 @@ public class AccountEntity {
     private List<PaymentEntity> payments = new ArrayList<>();
 
     @NotNull
-    @Builder.Default
     @Column(nullable = false)
-    private Double totalAmount = checkIn.getTotal(); // Costo estadía + room services
+    private Double totalAmount;
 
     @NotNull
     @Builder.Default
@@ -66,4 +65,14 @@ public class AccountEntity {
 
         this.isPaid = this.paidAmount.compareTo(this.totalAmount) >= 0;
     }
+
+    // Método pre-persistencia o inicializador útil antes de guardar en BD
+    @PrePersist
+    public void prePersist() {
+        if (this.totalAmount == null && this.checkIn != null) {
+            this.totalAmount = this.checkIn.getTotal();
+        }
+        recalculateAccount();
+    }
+
 }
