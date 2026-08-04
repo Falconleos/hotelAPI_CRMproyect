@@ -32,7 +32,7 @@ public class AccountEntity {
     @NotNull
     @Builder.Default
     @Column(nullable = false)
-    private Double totalAmount = checkIn.getTotal(); // Costo estadía + room services
+    private Double totalAmount = checkIn.getTotal();
 
     @NotNull
     @Builder.Default
@@ -52,8 +52,9 @@ public class AccountEntity {
     }
 
     // Método de negocio para sumar cargos adicionales (como Room Service) y recalcular saldos
+    // Código actual (tiene un pequeño detalle lógico)
     public void addRoomServiceCharge(Double amount) {
-        if (amount != null && amount < 0) {
+        if (amount != null && amount > 0.0) {
             this.totalAmount += amount;
             recalculateAccount();
         }
@@ -66,4 +67,5 @@ public class AccountEntity {
 
         this.isPaid = this.paidAmount.compareTo(this.totalAmount) >= 0;
     }
+
 }

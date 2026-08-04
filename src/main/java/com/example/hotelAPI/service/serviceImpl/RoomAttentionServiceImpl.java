@@ -5,9 +5,11 @@ import com.example.hotelAPI.dto.response.RoomAttentionDTOResponse;
 import com.example.hotelAPI.exceptions.CheckInNotFoundException;
 import com.example.hotelAPI.mappers.ItemMapper;
 import com.example.hotelAPI.mappers.RoomAttentionMapper;
+import com.example.hotelAPI.model.AccountEntity;
 import com.example.hotelAPI.model.CheckInEntity;
 import com.example.hotelAPI.model.ItemEntity;
 import com.example.hotelAPI.model.RoomAttentionEntity;
+import com.example.hotelAPI.repository.AccountRepository;
 import com.example.hotelAPI.repository.CheckInRepository;
 import com.example.hotelAPI.repository.RoomAttentionRepository;
 import com.example.hotelAPI.service.RoomAttentionService;
@@ -26,8 +28,10 @@ public class RoomAttentionServiceImpl implements RoomAttentionService{
     private final CheckInRepository checkInRepository;
     private final RoomAttentionMapper roomAttentionMapper;
     private final ItemMapper itemMapper;
+    private final AccountRepository accountRepository;
 
     @Override
+    @Transactional // <-- 2. Asegurar que sea transaccional para guardar cambios en cascada/cuenta
     public RoomAttentionDTOResponse createRoomAttention(RoomAttentionDTORequest request) {
         CheckInEntity checkIn = checkInRepository.findById(request.getCheckInId())
                 .orElseThrow(() -> new CheckInNotFoundException("Check-in not found with ID: " + request.getCheckInId()));
@@ -41,16 +45,27 @@ public class RoomAttentionServiceImpl implements RoomAttentionService{
         List<ItemEntity> items = request.getItems().stream().map(itemReq -> {
             ItemEntity item = itemMapper.toEntity(itemReq);
             item.setRoomAttentionEntity(roomAttention);
-            // Calcular subtotal (quantity * unitPrice)
-            Double subtotal = item.getUnitPrice()*item.getQuantity();
+            Double subtotal = item.getUnitPrice() * item.getQuantity();
             item.setSubtotal(subtotal);
             return item;
         }).collect(Collectors.toList());
 
         roomAttention.setItems(items);
-        roomAttention.calculateTotal(); // Método que calcula la suma de ítems + ajuste
+        roomAttention.calculateTotal(); // Calcula el total del Room Attention
 
+        // 3. Buscar la cuenta asociada al Check-In
+        AccountEntity account = accountRepository.findByCheckInId(checkIn.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found for Check-In ID: " + checkIn.getId()));
+
+        // 4. Sumar el total del consumo a la cuenta principal
+        account.addRoomServiceCharge(roomAttention.getTotal());
+
+        // Guardar la cuenta actualizada (o delegar la persistencia)
+        accountRepository.save(account);
+
+        // Guardar el Room Attention
         RoomAttentionEntity saved = roomAttentionRepository.save(roomAttention);
+
         return roomAttentionMapper.toDto(saved);
     }
 

@@ -26,8 +26,4 @@ public class CheckInDTORequest {
     @Schema(description = "Monto total a cobrar por la estadía", example = "350.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private Double total;
 
-    @NotNull(message = "Paid status is required")
-    @Schema(description = "Indica si la estadía ya fue pagada en su totalidad", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Boolean paid;
-
 }

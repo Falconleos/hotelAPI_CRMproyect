@@ -32,7 +32,6 @@ public class CheckInEntity {
 
     private CheckInState checkInState;
     private Double total;
-    private Boolean paid;
     private Boolean active;
 
 }
