@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 @Tag(name = "Autenticación", description = "Endpoints públicos para la gestión de accesos, registro y tokens")
-public class AuthController {
+public class    AuthController {
 
     private final AuthService authService;
 

@@ -231,6 +231,14 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(UnauthorizedCommentException.class)
+    public ResponseEntity<ErrorDTOResponse>handleInvalidId(UnauthorizedCommentException ex, WebRequest webRequest){
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body( new ErrorDTOResponse(ex.getMessage(), webRequest.getDescription(false)) );
+
+    }
+
 
 
     /// /////////////////////
