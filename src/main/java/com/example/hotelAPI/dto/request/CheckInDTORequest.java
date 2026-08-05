@@ -21,10 +21,4 @@ public class CheckInDTORequest {
     @Schema(description = "Identificador del huésped (usuario)", example = "4", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long userId;
 
-    @NotNull(message = "Total price is required")
-    @Positive(message = "Total must be a positive number greater than zero")
-    @Schema(description = "Monto total a cobrar por la estadía", example = "350.00", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Double total;
-
-
 }

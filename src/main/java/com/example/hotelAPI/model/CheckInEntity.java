@@ -35,4 +35,11 @@ public class CheckInEntity {
     private Boolean paid;
     private Boolean active;
 
+    @PrePersist
+    public void prePersist() {
+        if (paid == null) {
+            paid = false;
+        }
+    }
+
 }
