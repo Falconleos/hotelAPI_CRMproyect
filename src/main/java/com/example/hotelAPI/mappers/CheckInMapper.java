@@ -16,7 +16,6 @@ public interface CheckInMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "checkInState", ignore = true)
     @Mapping(target = "active", ignore = true)
-    @Mapping(target = "paid", ignore = true)
     @Mapping(target = "bookingEntity", ignore = true) // Resuelto en Service
     @Mapping(target = "userEntity", ignore = true)       // Resuelto en Service
     @Mapping(target = "employeeEntity", ignore = true)   // Resuelto en Service

@@ -32,7 +32,7 @@ public class AccountEntity {
     @NotNull
     @Builder.Default
     @Column(nullable = false)
-    private Double totalAmount = checkIn.getTotal();
+    private Double totalAmount = 0.0;
 
     @NotNull
     @Builder.Default
@@ -66,6 +66,19 @@ public class AccountEntity {
                 .reduce(0.0, Double::sum);
 
         this.isPaid = this.paidAmount.compareTo(this.totalAmount) >= 0;
+    }
+
+    // Método automático antes de guardar en la BD
+    @PrePersist
+    @PreUpdate
+    public void prePersistOrUpdate() {
+        if (this.checkIn != null && this.checkIn.getTotal() != null) {
+            // Si el totalAmount sigue en 0 o quieres asegurarte de sincronizarlo con el CheckIn al crear
+            if (this.totalAmount == null || this.totalAmount == 0.0) {
+                this.totalAmount = this.checkIn.getTotal();
+            }
+        }
+        recalculateAccount();
     }
 
 }

@@ -10,6 +10,7 @@ import com.example.hotelAPI.enums.RoomState;
 import com.example.hotelAPI.exceptions.*;
 import com.example.hotelAPI.mappers.CheckInMapper;
 import com.example.hotelAPI.model.*;
+import com.example.hotelAPI.repository.AccountRepository;
 import com.example.hotelAPI.repository.CheckInRepository;
 import com.example.hotelAPI.service.CheckInService;
 import com.example.hotelAPI.service.EmployeeService;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 public class CheckInServiceImpl implements CheckInService {
 
     private final CheckInRepository checkInRepository;
+    private final AccountRepository accountRepository; // Añadido para gestionar cuentas y pagos
     private final CheckInMapper checkInMapper;
 
     private final BookingServiceImpl bookingService;
@@ -39,14 +41,12 @@ public class CheckInServiceImpl implements CheckInService {
     private final UserServiceImpl userService;
 
     // 1. Find Check-In by ID
-    // 1.1. Returns Entity
     @Override
     public CheckInEntity getEntityById(Long id) {
         return checkInRepository.findById(id)
                 .orElseThrow(() -> new CheckInNotFoundException("Check-in registration not found"));
     }
 
-    // 1.2. Returns DTOResponse
     @Override
     public CheckInDTOResponse findById(Long id) {
         return checkInMapper.toDto(getEntityById(id));
@@ -59,7 +59,7 @@ public class CheckInServiceImpl implements CheckInService {
         if (active == null) {
             checkIns = checkInRepository.findAll();
         } else {
-            checkIns = checkInRepository.findByActiveTrue(); // Si active es false, puedes usar .findAll() filtrado o implementar findByActive(Boolean active)
+            checkIns = checkInRepository.findByActiveTrue();
         }
         return checkIns.stream()
                 .map(checkInMapper::toDto)
@@ -67,7 +67,6 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // 6. Other searches
-    // 6.1. List check-ins by state (CURRENTLY_ACTIVE, COMPLETED, INTERRUPTED)
     @Override
     public List<CheckInDTOResponse> findByState(CheckInState state) {
         return checkInRepository.findByCheckInState(state).stream()
@@ -75,7 +74,6 @@ public class CheckInServiceImpl implements CheckInService {
                 .toList();
     }
 
-    // 6.2. List check-ins by guest last name
     @Override
     public List<CheckInDTOResponse> checkInByLastName(String lastName) {
         List<CheckInEntity> checkIns = checkInRepository.findAll();
@@ -85,7 +83,6 @@ public class CheckInServiceImpl implements CheckInService {
                 .toList();
     }
 
-    // 6.3. List check-ins by DNI
     @Override
     public List<CheckInDTOResponse> checkInByDni(String dni) {
         List<CheckInEntity> checkIns = checkInRepository.findAll();
@@ -95,7 +92,6 @@ public class CheckInServiceImpl implements CheckInService {
                 .toList();
     }
 
-    // 6.4. List all check-ins of a specific room number
     @Override
     public List<CheckInDTOResponse> historyCheckInsByRoom(Integer roomNumber) {
         List<CheckInEntity> checkIns = checkInRepository.findAll();
@@ -106,7 +102,6 @@ public class CheckInServiceImpl implements CheckInService {
                 .toList();
     }
 
-    // 6.5. List check-ins whose CHECK-OUT is today
     @Override
     public List<CheckInDTOResponse> checkOutsOfTheDay() {
         List<CheckInEntity> checkIns = checkInRepository.findByActiveTrue().stream()
@@ -119,19 +114,16 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // 7. CHECK-IN Methods
-    // 7.1. Create check-in stay
     @Transactional
     @Override
     public CheckInDTOResponse checkIn(CheckInDTORequest request) {
         BookingEntity booking = bookingService.findEntityById(request.getBookingId());
         RoomEntity room = booking.getRoom();
 
-        //obtenemos al empleado del contexto
         Object principal = SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
         String employeeUsername = "";
-
         if(principal instanceof UserDetails){
             employeeUsername = ((UserDetails) principal).getUsername();
         }
@@ -139,7 +131,6 @@ public class CheckInServiceImpl implements CheckInService {
         UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
         EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
 
-        // Comprobamos si el usuario de este empleado está habilitado en el sistema
         if (employee.getUser() != null && !employee.getUser().isEnabled()) {
             throw new DisabledUserException("A disabled employee cannot generate a check-in.");
         }
@@ -152,10 +143,19 @@ public class CheckInServiceImpl implements CheckInService {
         checkIn.setCheckInState(CheckInState.CURRENTLY_ACTIVE);
         checkIn.setUserEntity(guest);
         checkIn.setEmployeeEntity(employee);
-        checkIn.setTotal(booking.getTotalPrice());
+        checkIn.setTotal(request.getTotal()); // O booking.getTotalPrice() según prefieras
         checkIn.setActive(true);
 
         CheckInEntity savedCheckIn = checkInRepository.save(checkIn);
+
+        // Crear automáticamente la cuenta contable asociada al Check-In
+        AccountEntity account = AccountEntity.builder()
+                .checkIn(savedCheckIn)
+                .totalAmount(savedCheckIn.getTotal())
+                .paidAmount(0.0)
+                .isPaid(false)
+                .build();
+        accountRepository.save(account);
 
         room.setState(RoomState.OCCUPIED);
         roomService.updateRoom(room);
@@ -166,7 +166,6 @@ public class CheckInServiceImpl implements CheckInService {
         return checkInMapper.toDto(savedCheckIn);
     }
 
-    // 7.2. Validations to create check-in
     private void validations(BookingEntity booking,
                              RoomEntity room,
                              EmployeeEntity employee,
@@ -180,7 +179,7 @@ public class CheckInServiceImpl implements CheckInService {
         if (employee == null) {
             throw new UserNotFoundException("Employee with that ID does not exist");
         }
-        if (!employee.getUser().isEnabled()) { // Usando getEnabled() según tu UserDtoResponse / UserEntity
+        if (!employee.getUser().isEnabled()) {
             throw new DisabledUserException("A disabled employee cannot process a check-in");
         }
         if (!booking.getActive()) {
@@ -200,7 +199,6 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // 8. Interrupt Stay Methods
-    // 8.1. Interrupt stay
     @Transactional
     @Override
     public CheckInDTOResponse interruptStay(Long id, String reason) {
@@ -212,27 +210,28 @@ public class CheckInServiceImpl implements CheckInService {
 
         checkIn.setCheckInState(CheckInState.INTERRUPTED);
         checkIn.setActive(false);
-        checkInRepository.save(checkIn);//persiste el checkIn
+        checkInRepository.save(checkIn);
 
-        // Cancelación de la reserva/estadía restante
-        booking.setState(BookingState.PENDING);//cambia temporalmente a pendiente para cancelarla
-        bookingService.cancelBooking(new BookingCancellationDTORequest(booking.getId(),reason));
+        booking.setState(BookingState.PENDING);
+        bookingService.cancelBooking(new BookingCancellationDTORequest(booking.getId(), reason));
 
         room.setState(RoomState.AVAILABLE);
-        roomService.updateRoom(room);//persiste cambios en habitacion
+        roomService.updateRoom(room);
 
         return checkInMapper.toDto(checkIn);
     }
 
-    // 8.2. Validate interruption parameters
     private void validationsInterruption(CheckInEntity checkIn) {
+        AccountEntity account = accountRepository.findByCheckInId(checkIn.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found for this check-in"));
+
         if (checkIn.getBookingEntity().getCheckOut().equals(LocalDate.now())) {
             throw new InvalidDateException("The stay cannot be interrupted because checkout is today");
         }
         if (checkIn.getCheckInState().equals(CheckInState.COMPLETED)) {
             throw new BookingStateConflictException("The stay has already completed");
         }
-        if (!checkIn.getPaid()) {
+        if (!Boolean.TRUE.equals(account.getIsPaid())) {
             throw new BookingStateConflictException("The stay must be settled/paid before interrupting");
         }
         if (checkIn.getCheckInState().equals(CheckInState.INTERRUPTED)) {
@@ -241,7 +240,6 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // 9. CHECK-OUT Methods
-    // 9.1. Perform checkout
     @Transactional
     @Override
     public CheckInDTOResponse checkOutStay(Long id) {
@@ -258,36 +256,42 @@ public class CheckInServiceImpl implements CheckInService {
         booking.setState(BookingState.CONCLUDED);
         bookingService.update(booking);
 
-        room.setState(RoomState.AVAILABLE); // Liberamos la habitación al hacer el checkout
+        room.setState(RoomState.AVAILABLE);
         roomService.updateRoom(room);
 
         return checkInMapper.toDto(checkIn);
     }
 
-    // 9.2. Validate checkout parameters
     private void validationsCheckOut(CheckInEntity checkIn) {
+        AccountEntity account = accountRepository.findByCheckInId(checkIn.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found for this check-in"));
+
         if (checkIn.getBookingEntity().getCheckOut().isAfter(LocalDate.now())) {
             throw new BookingStateConflictException("Checkout cannot be performed early. Use the 'interrupt' option instead");
         }
-        if (!checkIn.getPaid()) {
+        if (!Boolean.TRUE.equals(account.getIsPaid())) {
             throw new BookingStateConflictException("The stay must be paid prior to checkout");
         }
     }
 
-    // 10. Pay Stay
+    // 10. Pay Stay (Adaptado para verificar la cuenta)
     @Override
     public CheckInDTOResponse payStay(Long id) {
         CheckInEntity checkIn = getEntityById(id);
+        AccountEntity account = accountRepository.findByCheckInId(checkIn.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found for this check-in"));
+
         LocalDate checkOutDate = checkIn.getBookingEntity().getCheckOut();
 
         if (!checkOutDate.equals(LocalDate.now())) {
-            if (checkIn.getPaid()) {
+            if (Boolean.TRUE.equals(account.getIsPaid())) {
                 throw new BookingStateConflictException("The stay is already paid");
             }
         }
 
-        checkIn.setPaid(true);
-        return checkInMapper.toDto(checkInRepository.save(checkIn));
+        // Nota: Los pagos ahora se registran a través de AccountService / addPaymentToAccount.
+        // Aquí puedes retornar el checkIn o realizar lógica adicional si lo requieres.
+        return checkInMapper.toDto(checkIn);
     }
 
     // 11. Check if check-ins exist for a room
@@ -298,7 +302,6 @@ public class CheckInServiceImpl implements CheckInService {
     }
 
     // KPIs
-    // 11.1. Occupancy rate calculation
     @Override
     public Double occupancyRateByDateRange(LocalDate startDate, LocalDate endDate) {
         Integer roomCount = roomService.roomCount();
@@ -307,32 +310,32 @@ public class CheckInServiceImpl implements CheckInService {
         }
         long checkInCountInRange = checkInRepository.findAll().stream()
                 .filter(c -> {
-                    LocalDate checkIn = c.getBookingEntity().getCheckIn();
-                    LocalDate checkOut = c.getBookingEntity().getCheckOut();
-                    return (checkIn.equals(startDate) || checkIn.isAfter(startDate)) &&
-                            (checkOut.equals(endDate) || checkOut.isBefore(endDate));
+                    LocalDate checkInDate = c.getBookingEntity().getCheckIn();
+                    LocalDate checkOutDate = c.getBookingEntity().getCheckOut();
+                    return (checkInDate.equals(startDate) || checkInDate.isAfter(startDate)) &&
+                            (checkOutDate.equals(endDate) || checkOutDate.isBefore(endDate));
                 }).count();
 
         return 100 - ((checkInCountInRange * 100.0) / roomCount);
     }
 
-    // 11.2. Amount of currently active stays (check-ins)
     @Override
     public Integer activeStaysCount() {
         return checkInRepository.findByCheckInState(CheckInState.CURRENTLY_ACTIVE).size();
     }
 
-    // 11.3. Today's check-in revenue
     @Override
     public Double todaysCheckInRevenue() {
         return checkInRepository.findAll().stream()
                 .filter(c -> c.getBookingEntity().getCheckIn().equals(LocalDate.now()))
-                .filter(CheckInEntity::getPaid)
+                .filter(c -> {
+                    AccountEntity acc = accountRepository.findByCheckInId(c.getId()).orElse(null);
+                    return acc != null && Boolean.TRUE.equals(acc.getIsPaid());
+                })
                 .map(CheckInEntity::getTotal)
                 .reduce(0.0, Double::sum);
     }
 
-    // 11.4. Revenue grouped by month and year
     @Override
     public Map<String, Double> revenueByMonthAndYear(Integer year) {
         if (year == null) {
@@ -352,11 +355,13 @@ public class CheckInServiceImpl implements CheckInService {
 
         return checkInRepository.findAll().stream()
                 .filter(c -> c.getBookingEntity().getCheckIn().getYear() == year)
-                .filter(CheckInEntity::getPaid)
+                .filter(c -> {
+                    AccountEntity acc = accountRepository.findByCheckInId(c.getId()).orElse(null);
+                    return acc != null && Boolean.TRUE.equals(acc.getIsPaid());
+                })
                 .collect(Collectors.groupingBy(
                         c -> c.getBookingEntity().getCheckIn().getMonth().name(),
                         Collectors.summingDouble(CheckInEntity::getTotal)
                 ));
     }
-
 }

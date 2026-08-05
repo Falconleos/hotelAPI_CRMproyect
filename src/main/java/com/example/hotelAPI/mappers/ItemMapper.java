@@ -11,7 +11,7 @@ public interface ItemMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "subtotal", ignore = true) // Se calcula en el servicio o entidad
-    @Mapping(target = "roomService", ignore = true)
+    @Mapping(target = "roomAttentionEntity", ignore = true)
     ItemEntity toEntity(ItemDTORequest request);
 
     ItemDTOResponse toDto(ItemEntity entity);
