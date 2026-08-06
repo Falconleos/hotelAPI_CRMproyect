@@ -16,8 +16,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}")
+    @Value("${jwt.secret}")
     private String secretKey;
+    @Value("${access.expiration}")
+    private long accessExpiration;
 
     public String generateToken(UserDetails userDetails){
 
@@ -25,7 +27,7 @@ public class JwtService {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        long expirationTimeInMs = 1000 * 60 * 3; //3 minutos de duracion
+        long expirationTimeInMs = accessExpiration;
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
