@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (ExpiredJwtException e) {
             // 2. Si el token expiró en una ruta privada, respondemos con 403 de forma limpia
             System.out.println("El filtro rechazó la petición porque el JWT expiró.");
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setCharacterEncoding("UTF-8");
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"El token ha expirado\"}");
