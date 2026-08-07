@@ -17,7 +17,7 @@ public class RoomTypeDTORequest {
 
     @Schema(description = "Nombre único del tipo de habitación", example = "SUITE_DELUXE", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "The name is necessary")
-    @Size(min = 3, max = 50, message = "The name must be between 3 and 50 characters")
+    @Size(min = 1, max = 50, message = "The name must be between 3 and 50 characters")
     private String name;
 
     @Schema(description = "Capacidad máxima de personas", example = "4", requiredMode = Schema.RequiredMode.REQUIRED)
