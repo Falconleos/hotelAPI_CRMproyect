@@ -8,5 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<AccountEntity, Long> {
+
+    // Buscar una cuenta a partir del ID del Check-In vinculado
     Optional<AccountEntity> findByCheckInId(Long checkInId);
 }

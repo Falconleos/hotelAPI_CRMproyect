@@ -2,7 +2,7 @@ package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.dto.request.ItemDTORequest;
 import com.example.hotelAPI.dto.response.ItemDTOResponse;
-import com.example.hotelAPI.mappers.ItemMapper; // Ajusta según el nombre de tu paquete de mappers
+import com.example.hotelAPI.mappers.ItemMapper;
 import com.example.hotelAPI.model.ItemEntity;
 import com.example.hotelAPI.repository.ItemRepository;
 import com.example.hotelAPI.service.ItemService;
@@ -41,9 +41,13 @@ public class ItemServiceImpl implements ItemService {
     public ItemDTOResponse createItem(ItemDTORequest request) {
         ItemEntity entity = itemMapper.toEntity(request);
 
-        // Cálculo automático del subtotal
-        double subtotal = request.getQuantity() * request.getUnitPrice();
-        entity.setSubtotal(subtotal);
+        // Si es servicio, forzamos la cantidad a 1
+        if (Boolean.TRUE.equals(request.getIsService())) {
+            entity.setQuantity(1);
+            entity.setIsService(true);
+        } else {
+            entity.setIsService(false);
+        }
 
         ItemEntity savedEntity = itemRepository.save(entity);
         return itemMapper.toDto(savedEntity);
@@ -56,12 +60,16 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() -> new RuntimeException("Item no encontrado para actualizar con ID: " + id));
 
         existingEntity.setDescription(request.getDescription());
-        existingEntity.setQuantity(request.getQuantity());
         existingEntity.setUnitPrice(request.getUnitPrice());
 
-        // Recalcular subtotal
-        double subtotal = request.getQuantity() * request.getUnitPrice();
-        existingEntity.setSubtotal(subtotal);
+        // Forzar cantidad a 1 si es servicio
+        if (Boolean.TRUE.equals(request.getIsService())) {
+            existingEntity.setQuantity(1);
+            existingEntity.setIsService(true);
+        } else {
+            existingEntity.setQuantity(request.getQuantity());
+            existingEntity.setIsService(false);
+        }
 
         ItemEntity updatedEntity = itemRepository.save(existingEntity);
         return itemMapper.toDto(updatedEntity);

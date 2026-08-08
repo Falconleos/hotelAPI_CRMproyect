@@ -3,13 +3,10 @@ package com.example.hotelAPI.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "room_attention")
+@Table(name = "room_attentions")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,37 +18,37 @@ public class RoomAttentionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "roomAttentionEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ItemEntity> items = new ArrayList<>();
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Double adjustment = 0.0; // Descuento (-) o recargo (+) manual
-
-    @NotNull
-    @Builder.Default
-    @Column(nullable = false)
-    private Double total = 0.0; // Suma de subtotales + adjustment
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean paid = false; // Estado de pago del servicio de habitación
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "check_in_id", nullable = false)
     private CheckInEntity checkIn;
 
-    // Método auxiliar para recalcular el total automáticamente
-    public void calculateTotal() {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "item_id", nullable = false)
+    private ItemEntity item;
 
-        this.total = items.stream()
-                .map(ItemEntity::getSubtotal)
-                .reduce(0.0, Double::sum);
+    @NotNull(message = "Quantity is required")
+    @Column(nullable = false)
+    private Integer quantity;
 
-        // Evitar totales negativos por exceso de descuento
-        if (total<0.0) {
-            total = 0.0;
-        }
+    @NotNull(message = "Unit price is required")
+    @Column(nullable = false)
+    private Double unitPrice;
+
+    // NUEVO: Fecha y hora automática de la carga
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    // NUEVO: Empleado que otorgó/cargó el ítem o servicio
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
+    private UserEntity employee;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now(); // Asigna la fecha y hora exacta al guardar
+    }
+
+    public Double getSubtotal() {
+        return this.quantity * this.unitPrice;
     }
 }

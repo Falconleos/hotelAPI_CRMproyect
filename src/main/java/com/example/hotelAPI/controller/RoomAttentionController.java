@@ -3,8 +3,6 @@ package com.example.hotelAPI.controller;
 import com.example.hotelAPI.dto.request.RoomAttentionDTORequest;
 import com.example.hotelAPI.dto.response.RoomAttentionDTOResponse;
 import com.example.hotelAPI.service.RoomAttentionService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,41 +13,33 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/private/room-attention")
+@RequestMapping("/private/room-attentions")
 @RequiredArgsConstructor
-@Tag(name = "RoomAttention", description = "Endpoints para la gestión de consumos y servicios a la habitación")
 public class RoomAttentionController {
 
     private final RoomAttentionService roomAttentionService;
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
-    @Operation(summary = "Crear un consumo de Room Service asociado a un Check-In")
-    public ResponseEntity<RoomAttentionDTOResponse> createRoomAttention(@Valid @RequestBody RoomAttentionDTORequest request) {
-        RoomAttentionDTOResponse response = roomAttentionService.createRoomAttention(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
-    }
-
+    // Tanto Administradores como Recepcionistas pueden ver los consumos de un check-in
     @GetMapping("/check-in/{checkInId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST', 'GUEST')")
-    @Operation(summary = "Listar los consumos de Room Service de una estadía")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ROLE_ADMIN', 'RECEPCIONIST', 'ROLE_RECEPCIONIST')")
     public ResponseEntity<List<RoomAttentionDTOResponse>> getByCheckIn(@PathVariable Long checkInId) {
-        return ResponseEntity.ok(roomAttentionService.getRoomAttentionByCheckIn(checkInId));
+        return ResponseEntity.ok(roomAttentionService.getAttentionsByCheckIn(checkInId));
     }
 
-    @PatchMapping("/{id}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
-    @Operation(summary = "Marcar un consumo de Room Service como pago")
-    public ResponseEntity<RoomAttentionDTOResponse> payRoomAttention(@PathVariable Long id) {
-        return ResponseEntity.ok(roomAttentionService.payRoomAttention(id));
+    // Tanto Administradores como Recepcionistas pueden registrar un consumo o servicio
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ROLE_ADMIN', 'RECEPCIONIST', 'ROLE_RECEPCIONIST')")
+    public ResponseEntity<RoomAttentionDTOResponse> addAttention(@Valid @RequestBody RoomAttentionDTORequest request) {
+        RoomAttentionDTOResponse response = roomAttentionService.addAttention(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // Opcional: Si solo el Administrador puede eliminar cargos cargados por error, o si ambos pueden.
+    // Aquí lo dejamos abierto para ambos, o puedes ajustarlo solo a ADMIN si lo prefieres.
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
-    @Operation(summary = "Eliminar un consumo de Room Service no pagado")
-    public ResponseEntity<Void> deleteRoomAttention(@PathVariable Long id) {
-        roomAttentionService.deleteRoomAttention(id);
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ROLE_ADMIN', 'RECEPCIONIST', 'ROLE_RECEPCIONIST')")
+    public ResponseEntity<Void> removeAttention(@PathVariable Long id) {
+        roomAttentionService.removeAttention(id);
         return ResponseEntity.noContent().build();
     }
-
 }

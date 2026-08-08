@@ -1,23 +1,18 @@
 package com.example.hotelAPI.dto.request;
 
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.Data;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class RoomAttentionDTORequest {
     @NotNull(message = "Check-in ID is required")
     private Long checkInId;
 
-    @NotEmpty(message = "Room service must contain at least one item")
-    private List<ItemDTORequest> items;
+    @NotNull(message = "Item ID is required")
+    private Long itemId;
 
-    private Double adjustment; // Opcional (descuento o recargo manual)
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
+    private Integer quantity;
 }

@@ -12,5 +12,5 @@ public class ItemDTOResponse {
     private String description;
     private Integer quantity;
     private Double unitPrice;
-    private Double subtotal;
+    private Boolean isService; // Nuevo
 }

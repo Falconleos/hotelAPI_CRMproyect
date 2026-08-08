@@ -63,19 +63,19 @@ public class AuthService {
                 .orElseThrow(() -> new InvalidNameException("no rol named GUEST"));
 
         UserEntity userEntity = userMapper.toEntity(request);
-            userEntity.setPassword(passwordEncoder.encode(request.getPassword()));
-            userEntity.setRoles(Set.of(guestRole));
-            userEntity.setCreateAt(LocalDate.now());
-            userEntity.setAccountNonExpired(true);
-            userEntity.setAccountNonLocked(true);
-            userEntity.setCredentialsNonExpired(true);
-            userEntity.setEnabled(true);
+        userEntity.setPassword(passwordEncoder.encode(request.getPassword()));
+        userEntity.setRoles(Set.of(guestRole));
+        userEntity.setCreateAt(LocalDate.now());
+        userEntity.setAccountNonExpired(true);
+        userEntity.setAccountNonLocked(true);
+        userEntity.setCredentialsNonExpired(true);
+        userEntity.setEnabled(true);
 
         userRepository.save(userEntity);
 
         String token = jwtService.generateToken(new CustomUserDetails(userEntity));
         RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(userEntity.getUsername());
-            refreshTokenRepository.save(refreshTokenEntity);
+        refreshTokenRepository.save(refreshTokenEntity);
 
         ResponseCookie cookie = cookieService.createRefreshTokenCookie(refreshTokenEntity.getToken());
 
@@ -97,7 +97,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(userDetails);
         RefreshTokenEntity refreshTokenEntity = refreshTokenService.createRefreshToken(userDetails.getUsername());
-            refreshTokenRepository.save(refreshTokenEntity);
+        refreshTokenRepository.save(refreshTokenEntity);
 
         ResponseCookie cookie = cookieService.createRefreshTokenCookie(refreshTokenEntity.getToken());
 
@@ -127,7 +127,7 @@ public class AuthService {
         if(username!=null && !username.equals("anonymousUser")){
 
             UserEntity userEntity = userRepository.findByUsername(username)
-                            .orElseThrow(()->new UsernameNotFoundException("incorect username"));
+                    .orElseThrow(()->new UsernameNotFoundException("incorect username"));
 
             refreshTokenRepository.deleteByUserEntity(userEntity);
         }

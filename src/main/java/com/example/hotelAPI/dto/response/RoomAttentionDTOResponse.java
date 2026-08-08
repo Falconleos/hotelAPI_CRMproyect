@@ -1,22 +1,20 @@
 package com.example.hotelAPI.dto.response;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import java.time.LocalDateTime;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 @Builder
 public class RoomAttentionDTOResponse {
-
     private Long id;
     private Long checkInId;
-    private List<ItemDTOResponse> items;
-    private Double adjustment;
-    private Double total;
-    private Boolean paid;
-
+    private Long itemId;
+    private String itemDescription;
+    private Boolean isService;
+    private Integer quantity;
+    private Double unitPrice;
+    private Double subtotal;
+    private LocalDateTime createdAt;     // NUEVO
+    private String employeeUsername;   // NUEVO (o el nombre del empleado)
 }

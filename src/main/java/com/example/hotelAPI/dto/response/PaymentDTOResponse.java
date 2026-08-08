@@ -1,20 +1,21 @@
 package com.example.hotelAPI.dto.response;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PaymentDTOResponse {
     private Long id;
+    private Long accountId;
     private Double amount;
     private LocalDateTime paymentDate;
     private String paymentMethod;
     private String transactionReference;
-    private Long accountId;
 }

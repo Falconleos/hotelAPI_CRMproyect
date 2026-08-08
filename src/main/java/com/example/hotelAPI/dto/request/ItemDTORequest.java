@@ -6,8 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.math.BigDecimal;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,4 +23,6 @@ public class ItemDTORequest {
     @NotNull(message = "Unit price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Unit price must be greater than 0")
     private Double unitPrice;
+
+    private Boolean isService; // Nuevo
 }

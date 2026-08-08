@@ -10,9 +10,8 @@ import org.mapstruct.Mapping;
 public interface ItemMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "subtotal", ignore = true) // Se calcula en el servicio o entidad
-    @Mapping(target = "roomAttentionEntity", ignore = true)
     ItemEntity toEntity(ItemDTORequest request);
 
+    @Mapping(target = "isService", source = "isService")
     ItemDTOResponse toDto(ItemEntity entity);
 }

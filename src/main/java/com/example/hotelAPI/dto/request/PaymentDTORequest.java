@@ -2,24 +2,25 @@ package com.example.hotelAPI.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PaymentDTORequest {
 
-    @NotNull(message = "Account ID is required")
+    @NotNull(message = "El ID de la cuenta es obligatorio")
     private Long accountId;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
+    @NotNull(message = "El monto es obligatorio")
+    @DecimalMin(value = "0.01", message = "El monto debe ser mayor a cero")
     private Double amount;
 
-    private String paymentMethod; // Ej: CASH, CREDIT_CARD
-    private String transactionReference;
+    private String paymentMethod; // Ej: CASH, CREDIT_CARD, TRANSFER
+
+    private String transactionReference; // Número de comprobante o voucher
 }

@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "items")
 @Getter
@@ -34,13 +32,8 @@ public class ItemEntity {
     @NotNull(message = "Unit price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Unit price must be greater than 0")
     @Column(nullable = false)
-    private Double unitPrice; // Precio unitario para calcular el subtotal
+    private Double unitPrice;
 
-    @NotNull(message = "Subtotal is required")
     @Column(nullable = false)
-    private Double subtotal; // quantity * unitPrice
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_attention_id", nullable = false)
-    private RoomAttentionEntity roomAttentionEntity;
+    private Boolean isService = false; // Por defecto es falso (ítem normal)
 }

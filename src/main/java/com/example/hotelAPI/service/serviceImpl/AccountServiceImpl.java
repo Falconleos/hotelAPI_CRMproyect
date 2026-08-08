@@ -8,58 +8,88 @@ import com.example.hotelAPI.mappers.PaymentMapper;
 import com.example.hotelAPI.model.AccountEntity;
 import com.example.hotelAPI.model.PaymentEntity;
 import com.example.hotelAPI.repository.AccountRepository;
-import com.example.hotelAPI.repository.PaymentRepository;
 import com.example.hotelAPI.service.AccountService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
-    private final PaymentRepository paymentRepository; // Se puede mantener o prescindir si usas cascada, pero lo dejamos por compatibilidad
     private final AccountMapper accountMapper;
     private final PaymentMapper paymentMapper;
 
     @Override
     @Transactional(readOnly = true)
+    public List<AccountDTOResponse> getAllAccounts() {
+        return accountRepository.findAll().stream()
+                .map(accountMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AccountDTOResponse getAccountById(Long id) {
+        AccountEntity account = accountRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada con ID: " + id));
+        return accountMapper.toDto(account);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public AccountDTOResponse getAccountByCheckInId(Long checkInId) {
         AccountEntity account = accountRepository.findByCheckInId(checkInId)
-                .orElseThrow(() -> new RuntimeException("Account not found for Check-In ID: " + checkInId));
+                .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
         return accountMapper.toDto(account);
+    }
+
+    @Override
+    @Transactional
+    public void addChargeToAccount(Long checkInId, Double amount) {
+        AccountEntity account = accountRepository.findByCheckInId(checkInId)
+                .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
+
+        account.addRoomServiceCharge(amount); // Suma el cargo y recalcula
+        accountRepository.save(account);
+    }
+
+    @Override
+    @Transactional
+    public void subtractChargeFromAccount(Long checkInId, Double amount) {
+        AccountEntity account = accountRepository.findByCheckInId(checkInId)
+                .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
+
+        // Resta el monto del total y recalcula
+        account.setTotalAmount(account.getTotalAmount() - amount);
+        account.recalculateAccount();
+        accountRepository.save(account);
     }
 
     @Override
     @Transactional
     public PaymentDTOResponse addPaymentToAccount(PaymentDTORequest request) {
         AccountEntity account = accountRepository.findById(request.getAccountId())
-                .orElseThrow(() -> new RuntimeException("Account not found with ID: " + request.getAccountId()));
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Cuenta no encontrada con ID: " + request.getAccountId()));
 
-        if (Boolean.TRUE.equals(account.getIsPaid())) {
-            throw new IllegalStateException("This account is already fully paid.");
-        }
+        // Usamos el PaymentMapper para convertir el Request a Entity
+        PaymentEntity payment = paymentMapper.toEntity(request);
 
-        // Crear la entidad de pago
-        PaymentEntity payment = PaymentEntity.builder()
-                .amount(request.getAmount())
-                .paymentDate(LocalDateTime.now())
-                .paymentMethod(request.getPaymentMethod())
-                .transactionReference(request.getTransactionReference())
-                .build();
+        // Le asignamos la fecha actual ya que se ignora en el mapper
+        payment.setPaymentDate(java.time.LocalDateTime.now());
 
-        // Agregar el pago a la cuenta (esto recalcula totales y el isPaid de la cuenta internamente)
+        // Utiliza el método de negocio de AccountEntity para añadir el pago y recalcular
         account.addPayment(payment);
 
-        // Guardamos la cuenta (actualiza saldos y persiste el pago en cascada)
-        AccountEntity savedAccount = accountRepository.save(account);
+        accountRepository.save(account);
 
-        // Obtenemos el pago recién guardado (el último de la lista) para retornarlo en el DTO
-        PaymentEntity savedPayment = savedAccount.getPayments().get(savedAccount.getPayments().size() - 1);
-
+        // Obtenemos el pago recién guardado (el último de la lista) y lo mapeamos a DTO con Mapstruct
+        PaymentEntity savedPayment = account.getPayments().get(account.getPayments().size() - 1);
         return paymentMapper.toDto(savedPayment);
     }
 }

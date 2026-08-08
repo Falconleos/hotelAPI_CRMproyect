@@ -10,6 +10,7 @@ import com.example.hotelAPI.enums.RoomState;
 import com.example.hotelAPI.exceptions.*;
 import com.example.hotelAPI.mappers.CheckInMapper;
 import com.example.hotelAPI.model.*;
+import com.example.hotelAPI.repository.AccountRepository;
 import com.example.hotelAPI.repository.CheckInRepository;
 import com.example.hotelAPI.service.CheckInService;
 import com.example.hotelAPI.service.EmployeeService;
@@ -19,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -37,6 +39,8 @@ public class CheckInServiceImpl implements CheckInService {
     private final RoomService roomService;
     private final EmployeeService employeeService;
     private final UserServiceImpl userService;
+
+    private final AccountRepository accountRepository;
 
     // 1. Find Check-In by ID
     // 1.1. Returns Entity
@@ -162,6 +166,16 @@ public class CheckInServiceImpl implements CheckInService {
 
         booking.setState(BookingState.CHECKED_IN);
         bookingService.update(booking);
+
+        // --- CREAR Y GUARDAR LA CUENTA AUTOMÁTICAMENTE ---
+        AccountEntity account = AccountEntity.builder()
+                .checkIn(savedCheckIn)
+                .totalAmount(savedCheckIn.getTotal() != null ? savedCheckIn.getTotal() : 0.0)
+                .paidAmount(0.0)
+                .isPaid(false)
+                .build();
+        accountRepository.save(account);
+        // ------------------------------------------------
 
         return checkInMapper.toDto(savedCheckIn);
     }
