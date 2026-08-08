@@ -1,4 +1,4 @@
-package com.example.hotelAPI.service.impl; // O ajusta el paquete según tu estructura de carpetas (ej. com.example.hotelAPI.service)
+package com.example.hotelAPI.service.serviceImpl;
 
 import com.example.hotelAPI.dto.request.RoomAttentionDTORequest;
 import com.example.hotelAPI.dto.response.RoomAttentionDTOResponse;
@@ -10,6 +10,7 @@ import com.example.hotelAPI.repository.CheckInRepository;
 import com.example.hotelAPI.repository.ItemRepository;
 import com.example.hotelAPI.repository.RoomAttentionRepository;
 import com.example.hotelAPI.repository.UserRepository;
+import com.example.hotelAPI.service.AccountService; // <-- 1. Importar AccountService
 import com.example.hotelAPI.service.RoomAttentionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,11 +28,11 @@ public class RoomAttentionServiceImpl implements RoomAttentionService {
     private final CheckInRepository checkInRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final AccountService accountService; // <-- 2. Inyectar AccountService
 
     @Override
     @Transactional
     public RoomAttentionDTOResponse addAttention(RoomAttentionDTORequest request) {
-        // Obtener el username del empleado logueado desde el contexto de seguridad de Spring
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
         UserEntity employee = userRepository.findByUsername(currentUsername)
@@ -47,20 +48,29 @@ public class RoomAttentionServiceImpl implements RoomAttentionService {
                 .checkIn(checkIn)
                 .item(item)
                 .quantity(request.getQuantity())
-                .unitPrice(item.getUnitPrice()) // Congela el precio actual del catálogo
-                .employee(employee)             // Asigna el empleado logueado automáticamente
+                .unitPrice(item.getUnitPrice())
+                .employee(employee)
                 .build();
 
         RoomAttentionEntity saved = roomAttentionRepository.save(attention);
+
+        // <-- 3. Sumar automáticamente el subtotal del consumo al total de la cuenta
+        double totalCharge = saved.getSubtotal().doubleValue(); // Ajusta si tu subtotal es Double o BigDecimal
+        accountService.addChargeToAccount(checkIn.getId(), totalCharge);
+
         return mapToDto(saved);
     }
 
     @Override
     @Transactional
     public void removeAttention(Long id) {
-        if (!roomAttentionRepository.existsById(id)) {
-            throw new RuntimeException("Room attention not found");
-        }
+        RoomAttentionEntity attention = roomAttentionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Room attention not found"));
+
+        // <-- 4. Restar automáticamente el subtotal del consumo eliminado de la cuenta
+        double totalCharge = attention.getSubtotal().doubleValue();
+        accountService.subtractChargeFromAccount(attention.getCheckIn().getId(), totalCharge);
+
         roomAttentionRepository.deleteById(id);
     }
 

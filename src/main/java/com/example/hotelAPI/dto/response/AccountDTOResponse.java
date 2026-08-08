@@ -20,4 +20,16 @@ public class AccountDTOResponse {
     private Boolean isPaid;
     private List<PaymentDTOResponse> payments;
 
+    // Agregamos la lista de items/consumos para que Angular los pueda mostrar en la tabla
+    private List<AccountItemDto> items;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AccountItemDto {
+        private String description;
+        private Integer quantity;
+        private Double subtotal;
+    }
 }

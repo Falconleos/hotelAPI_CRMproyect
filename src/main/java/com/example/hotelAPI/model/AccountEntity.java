@@ -50,9 +50,9 @@ public class AccountEntity {
         recalculateAccount();
     }
 
-    // Método de negocio para sumar cargos adicionales (como Room Service) y recalcular saldos
+    // Método de negocio corregido para sumar cargos adicionales
     public void addRoomServiceCharge(Double amount) {
-        if (amount != null && amount < 0) {
+        if (amount != null && amount > 0) {
             this.totalAmount += amount;
             recalculateAccount();
         }
