@@ -19,7 +19,7 @@ public class BookingCancellationEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "booking_id", referencedColumnName = "id", nullable = false)
+    @JoinColumn(name = "booking_id", referencedColumnName = "id", nullable = false, unique = true)
     private BookingEntity booking;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)

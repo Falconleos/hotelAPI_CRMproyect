@@ -17,11 +17,27 @@ public class AccountDTOResponse {
     private Long checkInId;
     private Double totalAmount;
     private Double paidAmount;
+    private Double remainingBalance; // <-- Agregado
     private Boolean isPaid;
-    private List<PaymentDTOResponse> payments;
 
-    // Agregamos la lista de items/consumos para que Angular los pueda mostrar en la tabla
+    // Campos nuevos para la vista general en Angular
+    private UserDto user;
+    private String roomNumber;
+    private String checkInDate;
+    private String checkOutDate;
+
+    private List<PaymentDTOResponse> payments;
     private List<AccountItemDto> items;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UserDto {
+        private String name;
+        private String surname;
+        private String dni;
+    }
 
     @Data
     @Builder

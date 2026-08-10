@@ -13,4 +13,8 @@ public interface AccountService {
     void addChargeToAccount(Long checkInId, Double amount);
     void subtractChargeFromAccount(Long checkInId, Double amount);
     PaymentDTOResponse addPaymentToAccount(PaymentDTORequest request);
+
+    // Nuevos métodos para reservas
+    PaymentDTOResponse addPaymentToBooking(PaymentDTORequest request);
+    List<PaymentDTOResponse> getPaymentsByBookingId(Long bookingId);
 }

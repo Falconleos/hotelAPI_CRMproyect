@@ -5,7 +5,6 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -37,7 +36,17 @@ public class PaymentEntity {
     @Column(name = "transaction_reference")
     private String transactionReference; // Número de comprobante o voucher
 
+    // Ahora un pago puede pertenecer a una cuenta (post-checkin) O a una reserva (seña previa)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false)
+    @JoinColumn(name = "account_id", nullable = true)
     private AccountEntity account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = true)
+    private BookingEntity booking;
+
+    // Opcional en PaymentEntity si quieres guardarlo en base de datos:
+    private String registeredByName;
+    private String registeredBySurname;
+
 }

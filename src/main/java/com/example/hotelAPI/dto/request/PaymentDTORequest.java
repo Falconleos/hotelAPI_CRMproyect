@@ -13,8 +13,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PaymentDTORequest {
 
-    @NotNull(message = "El ID de la cuenta es obligatorio")
+    // Ya no es estrictamente obligatorio, puede ser null si el pago es una seña para una reserva
     private Long accountId;
+
+    // Nuevo campo opcional para asociar el pago directamente a una reserva (seña)
+    private Long bookingId;
 
     @NotNull(message = "El monto es obligatorio")
     @DecimalMin(value = "0.01", message = "El monto debe ser mayor a cero")

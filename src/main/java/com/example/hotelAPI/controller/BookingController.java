@@ -24,9 +24,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/private/booking")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
-@Tag(name = "Booking", description = "Endpoints para la administración y control de reservas")
-public class BookingController {
+@CrossOrigin(origins = "http://localhost:4200", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.OPTIONS}, allowCredentials = "true")
+@Tag(name = "Booking", description = "Endpoints para la administración y control de reservas")public class BookingController {
 
     private final BookingService bookingService;
 

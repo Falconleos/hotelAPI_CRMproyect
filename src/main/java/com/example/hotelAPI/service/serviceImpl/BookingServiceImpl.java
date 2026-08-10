@@ -15,6 +15,7 @@ import com.example.hotelAPI.model.BookingCancellationEntity;
 import com.example.hotelAPI.model.BookingEntity;
 import com.example.hotelAPI.model.EmployeeEntity;
 import com.example.hotelAPI.model.RoomEntity;
+import com.example.hotelAPI.repository.BookingCancellationRepository;
 import com.example.hotelAPI.repository.BookingRepository;
 import com.example.hotelAPI.service.*;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +28,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
+    private final BookingCancellationRepository bookingCancellationRepository;
     private final BookingMapper bookingMapper;
 
     private final BookingCancellationMapper bookingCancellationMapper;
@@ -84,7 +85,6 @@ public class BookingServiceImpl implements BookingService {
 
         RoomEntity room = roomService.findEntityById(request.getRoomId());
 
-        // Accedemos a la capacidad a través del Tipo de Habitación (RoomType)
         if (room.getType().getCapacity() < request.getGuestCount()) {
             throw new CapacityOutOfRangeException("Room capacity exceeded for the requested guest count.");
         }
@@ -96,7 +96,6 @@ public class BookingServiceImpl implements BookingService {
         long days = ChronoUnit.DAYS.between(request.getCheckIn(), request.getCheckOut());
         double totalPrice = room.getType().getPricePerNight() * days;
 
-        //obtenemos al empleado del contexto
         Object principal = SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
@@ -109,7 +108,6 @@ public class BookingServiceImpl implements BookingService {
         UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
         EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
 
-        // Comprobamos si el usuario de este empleado está habilitado en el sistema
         if (employee.getUser() != null && !employee.getUser().isEnabled()) {
             throw new DisabledUserException("A disabled employee cannot generate a booking.");
         }
@@ -132,7 +130,6 @@ public class BookingServiceImpl implements BookingService {
     public BookingCancellationDTOResponse cancelBooking(BookingCancellationDTORequest request) {
         BookingEntity booking = findEntityById(request.getBookingId());
 
-
         if (booking.getState() == BookingState.CHECKED_IN) {
             throw new BookingStateConflictException("The guest has already checked in. You can only interrupt the stay.");
         }
@@ -146,30 +143,32 @@ public class BookingServiceImpl implements BookingService {
             throw new BookingStateConflictException("This booking is already cancelled.");
         }
 
+        // Validación optimizada usando el repositorio de cancelaciones
+        if (bookingCancellationRepository.existsByBookingId(booking.getId())) {
+            throw new BookingStateConflictException("Esta reserva ya cuenta con un registro físico de cancelación en el sistema.");
+        }
+
         // Actualizamos estado de la reserva
         booking.setState(BookingState.CANCELLED);
         booking.setActive(false);
         bookingRepository.save(booking);
 
-        //obtenemos al empleado del contexto
         Object principal = SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
         String employeeUsername = "";
 
-        if(principal instanceof UserDetails){
+        if (principal instanceof UserDetails) {
             employeeUsername = ((UserDetails) principal).getUsername();
         }
 
         UserDtoResponse userDtoResponse = userService.findByUsername(employeeUsername);
         EmployeeEntity employee = employeeService.findEntityById(userDtoResponse.getId());
 
-        // Comprobamos si el usuario de este empleado está habilitado en el sistema
         if (employee.getUser() != null && !employee.getUser().isEnabled()) {
             throw new DisabledUserException("A disabled employee cannot generate a booking.");
         }
 
-        // Creamos la entidad física de cancelación
         BookingCancellationEntity cancellation = BookingCancellationEntity.builder()
                 .employee(employee)
                 .booking(booking)
@@ -205,7 +204,6 @@ public class BookingServiceImpl implements BookingService {
     public List<RoomEntity> getAvailableRoomsEntities(LocalDate checkIn, LocalDate checkOut, Integer guestCount) {
         List<BookingEntity> allBookings = bookingRepository.findAll();
 
-        // Identificamos las habitaciones que están tomadas en ese rango de fechas por reservas activas no cerradas
         List<Long> occupiedRoomIds = allBookings.stream()
                 .filter(b -> Boolean.TRUE.equals(b.getActive()))
                 .filter(b -> b.getState() != BookingState.CANCELLED &&
@@ -217,7 +215,6 @@ public class BookingServiceImpl implements BookingService {
                 .distinct()
                 .toList();
 
-        // Filtramos las habitaciones del hotel que tengan la capacidad y no estén ocupadas
         return roomService.findAll().stream()
                 .filter(r -> r.getType().getCapacity() >= guestCount)
                 .filter(r -> !occupiedRoomIds.contains(r.getId()))
@@ -243,7 +240,7 @@ public class BookingServiceImpl implements BookingService {
                 .toList();
     }
 
-    // 6.3. Reservas activas PENDING a X días del check-in (para llamar al cliente y confirmar)
+    // 6.3. Reservas activas PENDING a X días del check-in
     @Override
     @Transactional(readOnly = true)
     public List<BookingDTOResponse> getBookingsToConfirmInDays(Integer days) {
@@ -277,5 +274,4 @@ public class BookingServiceImpl implements BookingService {
     public boolean existsByRoomId(Long roomId) {
         return bookingRepository.existsByRoom_Id(roomId);
     }
-
 }

@@ -167,13 +167,24 @@ public class CheckInServiceImpl implements CheckInService {
         booking.setState(BookingState.CHECKED_IN);
         bookingService.update(booking);
 
-        // --- CREAR Y GUARDAR LA CUENTA AUTOMÁTICAMENTE ---
+        // --- CREAR Y GUARDAR LA CUENTA Y TRASLADAR SEÑAS PREVIAS ---
         AccountEntity account = AccountEntity.builder()
                 .checkIn(savedCheckIn)
                 .totalAmount(savedCheckIn.getTotal() != null ? savedCheckIn.getTotal() : 0.0)
                 .paidAmount(0.0)
                 .isPaid(false)
                 .build();
+
+        // Si la reserva tenía señas/pagos previos, los migramos a la cuenta
+        if (booking.getPayments() != null && !booking.getPayments().isEmpty()) {
+            List<PaymentEntity> bookingPayments = List.copyOf(booking.getPayments());
+            for (PaymentEntity payment : bookingPayments) {
+                booking.getPayments().remove(payment); // Desvinculamos de la reserva
+                payment.setBooking(null);
+                account.addPayment(payment); // Agregamos a la cuenta y recalcula automáticamente
+            }
+        }
+
         accountRepository.save(account);
         // ------------------------------------------------
 
@@ -226,14 +237,18 @@ public class CheckInServiceImpl implements CheckInService {
 
         checkIn.setCheckInState(CheckInState.INTERRUPTED);
         checkIn.setActive(false);
-        checkInRepository.save(checkIn);//persiste el checkIn
+        checkInRepository.save(checkIn); // Persiste el checkIn
 
-        // Cancelación de la reserva/estadía restante
-        booking.setState(BookingState.PENDING);//cambia temporalmente a pendiente para cancelarla
-        bookingService.cancelBooking(new BookingCancellationDTORequest(booking.getId(),reason));
+        // Cancelación directa de la reserva asociada sin romper restricciones únicas
+        booking.setState(BookingState.CANCELLED);
+        booking.setActive(false);
+        bookingService.update(booking);
+
+        // Opcional: Si necesitas guardar el registro en BookingCancellationEntity sin duplicar,
+        // puedes verificar si ya existe o simplemente dejar que la reserva quede cancelada.
 
         room.setState(RoomState.AVAILABLE);
-        roomService.updateRoom(room);//persiste cambios en habitacion
+        roomService.updateRoom(room); // Persiste cambios en habitación
 
         return checkInMapper.toDto(checkIn);
     }
@@ -246,9 +261,15 @@ public class CheckInServiceImpl implements CheckInService {
         if (checkIn.getCheckInState().equals(CheckInState.COMPLETED)) {
             throw new BookingStateConflictException("The stay has already completed");
         }
-        if (!checkIn.getPaid()) {
+
+        // Validamos consultando la cuenta asociada y su campo isPaid
+        AccountEntity account = accountRepository.findByCheckInId(checkIn.getId())
+                .orElseThrow(() -> new RuntimeException("Account not found for this check-in"));
+
+        if (!Boolean.TRUE.equals(account.getIsPaid())) {
             throw new BookingStateConflictException("The stay must be settled/paid before interrupting");
         }
+
         if (checkIn.getCheckInState().equals(CheckInState.INTERRUPTED)) {
             throw new BookingStateConflictException("The stay is already interrupted");
         }

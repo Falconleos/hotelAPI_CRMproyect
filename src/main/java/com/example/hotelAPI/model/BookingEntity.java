@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -58,6 +60,11 @@ public class BookingEntity {
 
     @Column(nullable = false)
     private Double totalPrice;
+
+    // Relación de pagos previos (señas) antes del check-in
+    @Builder.Default
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentEntity> payments = new ArrayList<>();
 
     // Relación uno a uno con la cancelación (La crearemos en el paso siguiente)
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

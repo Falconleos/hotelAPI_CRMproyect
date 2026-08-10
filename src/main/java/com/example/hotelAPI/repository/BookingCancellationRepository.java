@@ -1,8 +1,9 @@
-package com.example.hotelAPI.repository;
+    package com.example.hotelAPI.repository;
 
-import com.example.hotelAPI.model.BookingCancellationEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
+    import com.example.hotelAPI.model.BookingCancellationEntity;
+    import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BookingCancellationRepository extends JpaRepository<BookingCancellationEntity,Long> {
+    public interface BookingCancellationRepository extends JpaRepository<BookingCancellationEntity,Long> {
 
-}
+        boolean existsByBookingId(Long bookingId);
+    }

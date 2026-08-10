@@ -23,6 +23,41 @@ public class AccountMapper {
             return null;
         }
 
+        // Extracción segura de datos del Check-In, Huésped, Habitación y Fechas
+        String userName = null;
+        String userSurname = null;
+        String userDni = null;
+        String roomNumber = null;
+        String checkInDate = null;
+        String checkOutDate = null;
+
+        if (entity.getCheckIn() != null) {
+            if (entity.getCheckIn().getBookingEntity() != null) {
+                checkInDate = String.valueOf(entity.getCheckIn().getBookingEntity().getCheckIn());
+                checkOutDate = String.valueOf(entity.getCheckIn().getBookingEntity().getCheckOut());
+
+                if (entity.getCheckIn().getBookingEntity().getRoom() != null) {
+                    roomNumber = String.valueOf(entity.getCheckIn().getBookingEntity().getRoom().getNumber());
+                }
+            }
+
+            if (entity.getCheckIn().getUserEntity() != null) {
+                userName = entity.getCheckIn().getUserEntity().getName();
+                userSurname = entity.getCheckIn().getUserEntity().getSurname();
+                userDni = entity.getCheckIn().getUserEntity().getDni();
+            }
+        }
+
+        // Construcción del objeto interno UserDto
+        AccountDTOResponse.UserDto userDto = null;
+        if (userName != null || userSurname != null || userDni != null) {
+            userDto = AccountDTOResponse.UserDto.builder()
+                    .name(userName)
+                    .surname(userSurname)
+                    .dni(userDni)
+                    .build();
+        }
+
         // Obtenemos los consumos (RoomAttentions) asociados al Check-In de esta cuenta
         List<AccountDTOResponse.AccountItemDto> items = List.of();
         if (entity.getCheckIn() != null) {
@@ -34,16 +69,25 @@ public class AccountMapper {
                     .build()).collect(Collectors.toList());
         }
 
+        double total = entity.getTotalAmount() != null ? entity.getTotalAmount() : 0.0;
+        double paid = entity.getPaidAmount() != null ? entity.getPaidAmount() : 0.0;
+        double remaining = Math.max(0, total - paid);
+
         return AccountDTOResponse.builder()
                 .id(entity.getId())
                 .checkInId(entity.getCheckIn() != null ? entity.getCheckIn().getId() : null)
-                .totalAmount(entity.getTotalAmount())
-                .paidAmount(entity.getPaidAmount())
+                .totalAmount(total)
+                .paidAmount(paid)
+                .remainingBalance(remaining)
                 .isPaid(entity.getIsPaid())
+                .user(userDto)
+                .roomNumber(roomNumber)
+                .checkInDate(checkInDate)
+                .checkOutDate(checkOutDate)
                 .payments(entity.getPayments() != null ?
                         entity.getPayments().stream().map(this::toPaymentDto).collect(Collectors.toList()) :
                         List.of())
-                .items(items) // <-- Asignamos la lista de consumos mapeados
+                .items(items)
                 .build();
     }
 
@@ -52,12 +96,27 @@ public class AccountMapper {
             return null;
         }
 
+        String userName = null;
+        String userSurname = null;
+
+        if (entity.getAccount() != null &&
+                entity.getAccount().getCheckIn() != null &&
+                entity.getAccount().getCheckIn().getUserEntity() != null) {
+            userName = entity.getAccount().getCheckIn().getUserEntity().getName();
+            userSurname = entity.getAccount().getCheckIn().getUserEntity().getSurname();
+        }
+
         return PaymentDTOResponse.builder()
                 .id(entity.getId())
+                .accountId(entity.getAccount() != null ? entity.getAccount().getId() : null)
                 .amount(entity.getAmount())
                 .paymentDate(entity.getPaymentDate())
                 .paymentMethod(entity.getPaymentMethod())
                 .transactionReference(entity.getTransactionReference())
+                .userName(userName)
+                .userSurname(userSurname)
+                .registeredByName(entity.getRegisteredByName())
+                .registeredBySurname(entity.getRegisteredBySurname())
                 .build();
     }
 }

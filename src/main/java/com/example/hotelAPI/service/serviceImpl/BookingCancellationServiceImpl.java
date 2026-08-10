@@ -7,6 +7,7 @@ import com.example.hotelAPI.model.BookingCancellationEntity;
 import com.example.hotelAPI.repository.BookingCancellationRepository;
 import com.example.hotelAPI.service.BookingCancellationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +63,24 @@ public class BookingCancellationServiceImpl implements BookingCancellationServic
     @Override
     @Transactional
     public BookingCancellationEntity create(BookingCancellationEntity cancellation) {
+        if (cancellation.getBooking() != null && cancellation.getBooking().getId() != null) {
+            Long bookingId = cancellation.getBooking().getId();
+
+            // Verificamos directamente en la BD si ya existe una cancelación para esta reserva
+            if (repository.existsByBookingId(bookingId)) {
+                throw new IllegalStateException("La reserva con ID " + bookingId + " ya se encuentra cancelada.");
+            }
+        }
+
         cancellation.setCancellationDate(LocalDateTime.now());
-        return repository.save(cancellation);
+
+        try {
+            return repository.save(cancellation);
+        } catch (DataIntegrityViolationException e) {
+            // Captura defensiva por si la base de datos tiene un índice único duplicado
+            Long bookingId = cancellation.getBooking() != null ? cancellation.getBooking().getId() : null;
+            throw new IllegalStateException("Ya existe un registro físico de cancelación para la reserva con ID " + bookingId + ".");
+        }
     }
 
     // 4. Depurar historial de cancelaciones de más de un mes de antigüedad

@@ -50,4 +50,26 @@ public class AccountController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // --- NUEVOS ENDPOINTS PARA SEÑAS DE RESERVAS ---
+
+    @PostMapping("/bookings/payments")
+    public ResponseEntity<Object> addPaymentToBooking(@RequestBody com.example.hotelAPI.dto.request.PaymentDTORequest request) {
+        try {
+            PaymentDTOResponse paymentResponse = accountService.addPaymentToBooking(request);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(paymentResponse);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/bookings/{bookingId}/payments")
+    public ResponseEntity<Object> getPaymentsByBookingId(@PathVariable Long bookingId) {
+        try {
+            List<PaymentDTOResponse> payments = accountService.getPaymentsByBookingId(bookingId);
+            return ResponseEntity.ok(payments);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
+    }
 }
