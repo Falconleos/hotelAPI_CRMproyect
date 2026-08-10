@@ -41,6 +41,20 @@ public class AccountController {
         }
     }
 
+    // --- NUEVO ENDPOINT PARA ACTUALIZAR EL PORCENTAJE DE AJUSTE ---
+    @PutMapping("/check-in/{checkInId}/adjustment")
+    public ResponseEntity<Object> updateAdjustmentPercentage(
+            @PathVariable Long checkInId,
+            @RequestBody java.util.Map<String, Integer> requestBody) {
+        try {
+            Integer percentage = requestBody.get("adjustmentPercentage");
+            AccountDTOResponse updatedAccount = accountService.updateAdjustmentPercentage(checkInId, percentage);
+            return ResponseEntity.ok(updatedAccount);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/payments")
     public ResponseEntity<Object> addPayment(@RequestBody com.example.hotelAPI.dto.request.PaymentDTORequest request) {
         try {

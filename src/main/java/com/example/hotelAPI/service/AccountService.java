@@ -12,6 +12,10 @@ public interface AccountService {
     AccountDTOResponse getAccountByCheckInId(Long checkInId);
     void addChargeToAccount(Long checkInId, Double amount);
     void subtractChargeFromAccount(Long checkInId, Double amount);
+
+    // Nuevo método para actualizar el porcentaje de ajuste
+    AccountDTOResponse updateAdjustmentPercentage(Long checkInId, Integer adjustmentPercentage);
+
     PaymentDTOResponse addPaymentToAccount(PaymentDTORequest request);
 
     // Nuevos métodos para reservas

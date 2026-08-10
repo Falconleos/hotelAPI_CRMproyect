@@ -136,7 +136,7 @@ public class CheckInServiceImpl implements CheckInService {
 
         String employeeUsername = "";
 
-        if(principal instanceof UserDetails){
+        if (principal instanceof UserDetails) {
             employeeUsername = ((UserDetails) principal).getUsername();
         }
 
@@ -170,7 +170,7 @@ public class CheckInServiceImpl implements CheckInService {
         // --- CREAR Y GUARDAR LA CUENTA Y TRASLADAR SEÑAS PREVIAS ---
         AccountEntity account = AccountEntity.builder()
                 .checkIn(savedCheckIn)
-                .totalAmount(savedCheckIn.getTotal() != null ? savedCheckIn.getTotal() : 0.0)
+                .baseAmount(savedCheckIn.getTotal() != null ? savedCheckIn.getTotal() : 0.0)
                 .paidAmount(0.0)
                 .isPaid(false)
                 .build();
@@ -392,6 +392,18 @@ public class CheckInServiceImpl implements CheckInService {
                         c -> c.getBookingEntity().getCheckIn().getMonth().name(),
                         Collectors.summingDouble(CheckInEntity::getTotal)
                 ));
+    }
+
+    @Override
+    public List<CheckInDTOResponse> getMyCheckIns() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        UserEntity user = userService.findEntityById(userService.findByUsername(username).getId());
+
+        List<CheckInEntity> checkIns = checkInRepository.findAll();
+        return checkIns.stream()
+                .filter(c -> c.getUserEntity() != null && c.getUserEntity().getId().equals(user.getId()))
+                .map(checkInMapper::toDto)
+                .toList();
     }
 
 }

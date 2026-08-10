@@ -69,17 +69,32 @@ public class AccountMapper {
                     .build()).collect(Collectors.toList());
         }
 
-        double total = entity.getTotalAmount() != null ? entity.getTotalAmount() : 0.0;
+        // Tomamos la estadía base fija desde baseAmount
+        double baseAmount = entity.getBaseAmount() != null ? entity.getBaseAmount() : 0.0;
+
+        // Sumamos los subtotales de los servicios
+        double itemsTotal = items.stream()
+                .mapToDouble(item -> item.getSubtotal() != null ? item.getSubtotal() : 0.0)
+                .sum();
+
+        double subtotalGeneral = baseAmount + itemsTotal;
+
+        // Aplicamos el porcentaje de ajuste sobre la suma de (estadia base + servicios)
+        int adjustmentPercentage = entity.getAdjustmentPercentage() != null ? entity.getAdjustmentPercentage() : 0;
+        double finalTotal = Math.max(0, subtotalGeneral + (subtotalGeneral * adjustmentPercentage / 100.0));
+
         double paid = entity.getPaidAmount() != null ? entity.getPaidAmount() : 0.0;
-        double remaining = Math.max(0, total - paid);
+        double remaining = Math.max(0, finalTotal - paid);
 
         return AccountDTOResponse.builder()
                 .id(entity.getId())
                 .checkInId(entity.getCheckIn() != null ? entity.getCheckIn().getId() : null)
-                .totalAmount(total)
+                .baseAmount(baseAmount)          // <-- Enviamos la estadía base fija por separado
+                .totalAmount(finalTotal)         // <-- Total general final
                 .paidAmount(paid)
                 .remainingBalance(remaining)
                 .isPaid(entity.getIsPaid())
+                .adjustmentPercentage(adjustmentPercentage)
                 .user(userDto)
                 .roomNumber(roomNumber)
                 .checkInDate(checkInDate)

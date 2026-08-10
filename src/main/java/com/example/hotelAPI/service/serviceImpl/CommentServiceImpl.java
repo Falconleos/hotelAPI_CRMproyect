@@ -38,29 +38,24 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public CommentDTOResponse createComment(CommentDTORequest request) {
-
-        String username;
-
-        if(SecurityContextHolder.getContext().getAuthentication()!=null){
-            username = SecurityContextHolder.getContext().getAuthentication().getName();
-        }else{
-            throw new InvalidNameException("no username detected");
-        }
-
-        // 1. Buscar usuario actual
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Buscar la estadía (CheckIn)
         CheckInEntity checkIn = checkInRepository.findById(request.getCheckInId())
                 .orElseThrow(() -> new CheckInNotFoundException("Check-in not found with ID: " + request.getCheckInId()));
 
-        // 3. Validar que el usuario sea el que formó parte de la estadía
-        if (!checkIn.getUserEntity().getId().equals(user.getId())) {
+        // NUEVA LÓGICA:
+        // 1. Verificamos si el usuario tiene rol de ADMIN
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equalsIgnoreCase("ADMIN"));
+
+        // 2. Solo lanzamos la excepción si NO es el dueño Y TAMPOCO es administrador
+        if (!checkIn.getUserEntity().getId().equals(user.getId()) && !isAdmin) {
             throw new UnauthorizedCommentException("El usuario no formó parte de esta estadía y no puede comentarla.");
         }
 
-        // 5. Mapear y guardar
+        // El resto del código sigue igual
         CommentEntity comment = commentMapper.toEntity(request);
         comment.setUser(user);
         comment.setCheckIn(checkIn);
@@ -71,8 +66,18 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CommentDTOResponse> getCommentsByCheckIn(Long checkInId) {
-        return commentRepository.findByCheckInId(checkInId).stream()
+    public List<CommentDTOResponse> getMyComments() {
+        String username;
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            username = SecurityContextHolder.getContext().getAuthentication().getName();
+        } else {
+            throw new InvalidNameException("no username detected");
+        }
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return commentRepository.findByUserId(user.getId()).stream()
                 .map(commentMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -93,4 +98,52 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.delete(comment);
     }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommentDTOResponse> getCommentsByCheckIn(Long checkInId) {
+        // Validamos que exista la estadía o simplemente buscamos por checkInId en el repositorio
+        return commentRepository.findByCheckInId(checkInId).stream()
+                .map(commentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public CommentDTOResponse updateComment(Long id, CommentDTORequest request) {
+        // 1. Buscar el comentario existente
+        CommentEntity comment = commentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Comment not found with ID: " + id));
+
+        // 2. Obtener el usuario actual logueado
+        String username;
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            username = SecurityContextHolder.getContext().getAuthentication().getName();
+        } else {
+            throw new RuntimeException("No username detected");
+        }
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 3. Validar permisos (Dueño del comentario o Admin)
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equalsIgnoreCase("ADMIN"));
+
+        boolean isOwner = comment.getUser().getId().equals(user.getId());
+
+        if (!isOwner && !isAdmin) {
+            throw new RuntimeException("No tienes permisos para modificar este comentario.");
+        }
+
+        // 4. Actualizar los campos permitidos
+        comment.setContent(request.getContent());
+        comment.setRating(request.getRating());
+
+        // 5. Guardar y retornar
+        CommentEntity updatedComment = commentRepository.save(comment);
+        return commentMapper.toDto(updatedComment);
+    }
+
 }

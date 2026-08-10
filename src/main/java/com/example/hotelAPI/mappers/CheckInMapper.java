@@ -35,12 +35,10 @@ public abstract class CheckInMapper {
     @Mapping(target = "paid", expression = "java(getIsPaid(entity))")
     public abstract CheckInDTOResponse toDto(CheckInEntity entity);
 
-    // Métodos auxiliares para obtener los valores reales desde AccountEntity
+    // Método auxiliar para mantener el precio base original del Check-In intacto
     protected Double getTotalAmount(CheckInEntity entity) {
-        if (entity == null || entity.getId() == null) return 0.0;
-        return accountRepository.findByCheckInId(entity.getId())
-                .map(AccountEntity::getTotalAmount)
-                .orElse(entity.getTotal() != null ? entity.getTotal() : 0.0);
+        if (entity == null) return 0.0;
+        return entity.getTotal() != null ? entity.getTotal() : 0.0;
     }
 
     protected Boolean getIsPaid(CheckInEntity entity) {

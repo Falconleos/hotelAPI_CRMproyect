@@ -131,4 +131,10 @@ public class CheckInController {
         return ResponseEntity.ok(checkInService.revenueByMonthAndYear(year));
     }
 
+    @GetMapping("/my-check-ins")
+    @Operation(summary = "Listar las estadías propias del huésped logueado")
+    public ResponseEntity<List<CheckInDTOResponse>> getMyCheckIns() {
+        return ResponseEntity.ok(checkInService.getMyCheckIns());
+    }
+
 }

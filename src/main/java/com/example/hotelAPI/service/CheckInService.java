@@ -44,4 +44,6 @@ public interface CheckInService {
     Double todaysCheckInRevenue();
     Map<String, Double> revenueByMonthAndYear(Integer year);
 
+    List<CheckInDTOResponse> getMyCheckIns();
+
 }

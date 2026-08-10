@@ -15,12 +15,17 @@ public class AccountDTOResponse {
 
     private Long id;
     private Long checkInId;
-    private Double totalAmount;
+
+    private Double baseAmount;       // <-- Valor fijo de la estadía base
+    private Double totalAmount;      // <-- Total general final (Base + ítems + porcentaje de ajuste)
     private Double paidAmount;
-    private Double remainingBalance; // <-- Agregado
+    private Double remainingBalance;
     private Boolean isPaid;
 
-    // Campos nuevos para la vista general en Angular
+    // Atributo para el porcentaje de ajuste (+/-)
+    private Integer adjustmentPercentage;
+
+    // Campos para la vista general en Angular
     private UserDto user;
     private String roomNumber;
     private String checkInDate;

@@ -11,7 +11,7 @@ import com.example.hotelAPI.model.BookingEntity;
 import com.example.hotelAPI.model.PaymentEntity;
 import com.example.hotelAPI.model.UserEntity;
 import com.example.hotelAPI.repository.AccountRepository;
-import com.example.hotelAPI.repository.BookingRepository; // Asegúrate de tener este import
+import com.example.hotelAPI.repository.BookingRepository;
 import com.example.hotelAPI.repository.UserRepository;
 import com.example.hotelAPI.service.AccountService;
 import jakarta.persistence.EntityNotFoundException;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
-    private final BookingRepository bookingRepository; // Añadir esta dependencia
+    private final BookingRepository bookingRepository;
     private final AccountMapper accountMapper;
     private final PaymentMapper paymentMapper;
     private final UserRepository userRepository;
@@ -62,7 +62,12 @@ public class AccountServiceImpl implements AccountService {
         AccountEntity account = accountRepository.findByCheckInId(checkInId)
                 .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
 
-        account.addRoomServiceCharge(amount);
+        // Sumamos al total de servicios extra, dejando baseAmount totalmente intacto
+        double currentServices = account.getServicesTotal() != null ? account.getServicesTotal() : 0.0;
+        double addedAmount = amount != null ? amount : 0.0;
+        account.setServicesTotal(currentServices + addedAmount);
+
+        account.recalculateAccount();
         accountRepository.save(account);
     }
 
@@ -72,9 +77,26 @@ public class AccountServiceImpl implements AccountService {
         AccountEntity account = accountRepository.findByCheckInId(checkInId)
                 .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
 
-        account.setTotalAmount(account.getTotalAmount() - amount);
+        // Restamos del total de servicios extra de forma segura sin tocar baseAmount
+        double currentServices = account.getServicesTotal() != null ? account.getServicesTotal() : 0.0;
+        double subAmount = amount != null ? amount : 0.0;
+        account.setServicesTotal(Math.max(0.0, currentServices - subAmount));
+
         account.recalculateAccount();
         accountRepository.save(account);
+    }
+
+    @Override
+    @Transactional
+    public AccountDTOResponse updateAdjustmentPercentage(Long checkInId, Integer adjustmentPercentage) {
+        AccountEntity account = accountRepository.findByCheckInId(checkInId)
+                .orElseThrow(() -> new EntityNotFoundException("Cuenta no encontrada para el check-in ID: " + checkInId));
+
+        account.setAdjustmentPercentage(adjustmentPercentage != null ? adjustmentPercentage : 0);
+        account.recalculateAccount();
+
+        AccountEntity savedAccount = accountRepository.save(account);
+        return accountMapper.toDto(savedAccount);
     }
 
     @Override
@@ -83,7 +105,6 @@ public class AccountServiceImpl implements AccountService {
         AccountEntity account = accountRepository.findById(request.getAccountId())
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Cuenta no encontrada con ID: " + request.getAccountId()));
 
-        // Obtener el usuario logueado actual desde el contexto de seguridad
         var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String loggedUserName = null;
         String loggedUserSurname = null;
@@ -101,7 +122,6 @@ public class AccountServiceImpl implements AccountService {
         PaymentEntity payment = paymentMapper.toEntity(request);
         payment.setPaymentDate(java.time.LocalDateTime.now());
 
-        // Si vas a persistir el nombre y apellido en la entidad de pago:
         payment.setRegisteredByName(loggedUserName);
         payment.setRegisteredBySurname(loggedUserSurname);
 
@@ -110,7 +130,6 @@ public class AccountServiceImpl implements AccountService {
 
         PaymentEntity savedPayment = account.getPayments().get(account.getPayments().size() - 1);
 
-        // Mapear al DTO asegurando que viajen los datos del usuario logueado
         PaymentDTOResponse response = paymentMapper.toDto(savedPayment);
         response.setRegisteredByName(loggedUserName);
         response.setRegisteredBySurname(loggedUserSurname);
@@ -118,26 +137,21 @@ public class AccountServiceImpl implements AccountService {
         return response;
     }
 
-    // --- NUEVOS MÉTODOS PARA SEÑAS DE RESERVAS ---
-
     @Override
     @Transactional
     public PaymentDTOResponse addPaymentToBooking(PaymentDTORequest request) {
         BookingEntity booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada con ID: " + request.getBookingId()));
 
-        // Calcular la suma de las señas ya registradas
         double currentPaymentsTotal = booking.getPayments().stream()
                 .mapToDouble(PaymentEntity::getAmount)
                 .sum();
 
-        // Verificar si el nuevo pago excede el total de la reserva
         if (currentPaymentsTotal + request.getAmount() > booking.getTotalPrice()) {
             double remainingBalance = booking.getTotalPrice() - currentPaymentsTotal;
             throw new IllegalArgumentException("El monto de la seña excede el saldo restante de la reserva. Saldo pendiente: $" + remainingBalance);
         }
 
-        // Obtener el usuario logueado actual desde el contexto de seguridad
         var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String loggedUserName = null;
         String loggedUserSurname = null;
@@ -156,7 +170,6 @@ public class AccountServiceImpl implements AccountService {
         payment.setPaymentDate(java.time.LocalDateTime.now());
         payment.setBooking(booking);
 
-        // Asignar los datos del usuario logueado
         payment.setRegisteredByName(loggedUserName);
         payment.setRegisteredBySurname(loggedUserSurname);
 

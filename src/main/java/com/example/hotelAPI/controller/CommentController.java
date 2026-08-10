@@ -12,8 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import com.example.hotelAPI.model.UserEntity;
+import com.example.hotelAPI.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -25,6 +28,7 @@ import java.util.List;
 public class CommentController {
 
     private final CommentService commentService;
+    private final UserRepository userRepository;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('GUEST', 'ADMIN')")
@@ -47,10 +51,30 @@ public class CommentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST')")
-    @Operation(summary = "Listar todos los comentarios del sistema (Admin/Recepcionista)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONIST', 'GUEST')")
+    @Operation(summary = "Listar comentarios (Todos para Admin/Recepcionista, propios para Guest)")
     public ResponseEntity<List<CommentDTOResponse>> getAllComments() {
-        return ResponseEntity.ok(commentService.getAllComments());
+        // Obtenemos el usuario autenticado para verificar su rol
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean isAdminOrReceptionist = user.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equalsIgnoreCase("ADMIN") ||
+                        role.getName().name().equalsIgnoreCase("RECEPCIONIST"));
+
+        if (isAdminOrReceptionist) {
+            return ResponseEntity.ok(commentService.getAllComments());
+        } else {
+            return ResponseEntity.ok(commentService.getMyComments());
+        }
+    }
+
+    @GetMapping("/my-comments")
+    @PreAuthorize("hasRole('GUEST')")
+    @Operation(summary = "Listar los comentarios propios del huésped logueado")
+    public ResponseEntity<List<CommentDTOResponse>> getMyComments() {
+        return ResponseEntity.ok(commentService.getMyComments());
     }
 
     @DeleteMapping("/{id}")
@@ -59,5 +83,20 @@ public class CommentController {
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
         commentService.deleteComment(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('GUEST', 'ADMIN')")
+    @Operation(summary = "Actualizar un comentario", description = "Permite modificar el contenido o la valoración de un comentario existente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Comentario actualizado con éxito"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "404", description = "Comentario no encontrado")
+    })
+    public ResponseEntity<CommentDTOResponse> updateComment(
+            @PathVariable Long id,
+            @Valid @RequestBody CommentDTORequest request) {
+        CommentDTOResponse response = commentService.updateComment(id, request);
+        return ResponseEntity.ok(response);
     }
 }

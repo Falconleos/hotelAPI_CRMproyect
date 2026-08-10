@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,9 +28,16 @@ public class AccountEntity {
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentEntity> payments = new ArrayList<>();
 
+    // 1. Estadía base fija (Valor original del check-in, no debe alterarse)
     @NotNull
     @Column(nullable = false)
-    private Double totalAmount;
+    private Double baseAmount;
+
+    // 2. Subtotal aislado para consumos/servicios extra (Room Attention, ítems, etc.)
+    @NotNull
+    @Builder.Default
+    @Column(nullable = false)
+    private Double servicesTotal = 0.0;
 
     @NotNull
     @Builder.Default
@@ -41,7 +47,12 @@ public class AccountEntity {
     @NotNull
     @Builder.Default
     @Column(nullable = false)
-    private Boolean isPaid = false; // Se pone en true cuando paidAmount >= totalAmount
+    private Boolean isPaid = false; // Se pone en true cuando paidAmount >= total final
+
+    // Porcentaje de recargo (+) o descuento (-)
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer adjustmentPercentage = 0;
 
     // Método de negocio para registrar un pago y actualizar saldos
     public void addPayment(PaymentEntity payment) {
@@ -50,29 +61,37 @@ public class AccountEntity {
         recalculateAccount();
     }
 
-    // Método de negocio corregido para sumar cargos adicionales
-    public void addRoomServiceCharge(Double amount) {
-        if (amount != null && amount > 0) {
-            this.totalAmount += amount;
-            recalculateAccount();
-        }
-    }
-
     public void recalculateAccount() {
         this.paidAmount = payments.stream()
                 .map(PaymentEntity::getAmount)
                 .reduce(0.0, Double::sum);
 
-        this.isPaid = this.paidAmount.compareTo(this.totalAmount) >= 0;
+        this.isPaid = this.paidAmount.compareTo(this.getFinalTotal()) >= 0;
     }
 
-    // Método pre-persistencia o inicializador útil antes de guardar en BD
+    // Método que suma los subtotales pero los mantiene separados en la base de datos
+    public Double getSubtotal() {
+        double base = this.baseAmount != null ? this.baseAmount : 0.0;
+        double extras = this.servicesTotal != null ? this.servicesTotal : 0.0;
+        return base + extras;
+    }
+
+    // Método para obtener el total final considerando la estadía base + servicios + ajuste por porcentaje
+    public Double getFinalTotal() {
+        double subtotal = this.getSubtotal();
+        int percentage = this.adjustmentPercentage != null ? this.adjustmentPercentage : 0;
+        double adjusted = subtotal + (subtotal * percentage / 100.0);
+        return Math.max(0.0, adjusted);
+    }
+
     @PrePersist
     public void prePersist() {
-        if (this.totalAmount == null && this.checkIn != null) {
-            this.totalAmount = this.checkIn.getTotal();
+        if (this.baseAmount == null && this.checkIn != null) {
+            this.baseAmount = this.checkIn.getTotal();
+        }
+        if (this.servicesTotal == null) {
+            this.servicesTotal = 0.0;
         }
         recalculateAccount();
     }
-
 }
